@@ -13,18 +13,37 @@
 import argparse, csv, hashlib, json, os, re, subprocess, sys, time
 from urllib.parse import quote
 
+# DOI 前缀 → 文章页模板。内置只放通用刊（力学 / 物理 / 工程类）。
+# 其他刊（尤其方向性强的）放进本地映射文件，不入库：
+#   scripts/cn_journal_map.local.json  →  {"10.xxxxx": "https://<官网>/article/doi/{doi}"}
+# 占位符：{doi}（完整 DOI，已 URL 编码）、{tail}（DOI 斜杠后的部分）
 TPL = {
-    "10.11883": "https://www.bzycj.cn/cn/article/doi/{doi}",          # 爆炸与冲击
-    "10.12382": "https://www.co-journal.com/zh/article/doi/{doi}",     # 兵工学报
     "10.6052":  "https://lxxb.cstam.org.cn/article/doi/{doi}",         # 力学学报
     "10.19596": "https://cjcp.org.cn/cn/article/doi/{doi}",            # 计算物理
     "10.15918": "https://journal.bit.edu.cn/zr/cn/article/doi/{doi}",  # 北京理工大学学报
-    "10.11943": "https://www.energetic-materials.org.cn/hncl/article/html/{tail}",  # 含能材料
-    "10.19693": "https://ship-research.com/cn/article/doi/{doi}",      # 中国舰船研究（cjsr.com.cn 已废）
     "10.14006": "https://jzjgxb.com/cn/article/doi/{doi}",             # 建筑结构学报
-    "10.11993": "https://sxwrxtxb.xml-journal.net/cn/article/doi/{doi}",  # 水下无人系统学报
-    "10.7511":  "https://cvl.cstam.org.cn/cn/article/doi/{doi}",       # 计算力学学报
+    "10.7511":  "https://cvl.cstam.org.cn/article/doi/{doi}",          # 计算力学学报
 }
+
+LOCAL_MAP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cn_journal_map.local.json")
+
+
+def load_local_map(path=LOCAL_MAP):
+    """合并本地映射（可选）。文件缺失或格式错就静默跳过，不影响内置表。"""
+    if not os.path.exists(path):
+        return 0
+    try:
+        with open(path, encoding="utf-8") as f:
+            extra = json.load(f)
+    except Exception as e:
+        print("local map skipped: %s" % e)
+        return 0
+    n = 0
+    for k, v in (extra or {}).items():
+        if isinstance(k, str) and isinstance(v, str) and ("{doi}" in v or "{tail}" in v):
+            TPL[k] = v
+            n += 1
+    return n
 
 
 def curl(url, out=None, timeout=60, referer=None):
@@ -84,6 +103,7 @@ def load(csv_path, force):
 
 
 def main():
+    load_local_map()
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", required=True)
     ap.add_argument("--dest", required=True)

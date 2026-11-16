@@ -19,7 +19,7 @@
 | `runtime.md` | 标签页会话基线（snapshot/plan）+ 代理与邮箱配置 | 要开浏览器 / 报 timeout / 配 `SCHOLAR_EMAIL` |
 | `CHANGELOG.md` | 版本变更记录（3.0.0 → 3.1.0） | 判断手上这份是不是最新 / 对照他人版本 |
 | `syntax.md` | 8 个平台的检索字段与运算符 + 精确直达矩阵 | 需要构造检索式或精确直达 |
-| `platforms-cn-journal.md` | 中文期刊官网真 PDF（L1.5，兵工学报 / 爆炸与冲击实测 12 篇） | 拿到中文期刊 DOI、要先试官网 |
+| `platforms-cn-journal.md` | 中文期刊官网真 PDF（L1.5，实测 12 篇） | 拿到中文期刊 DOI、要先试官网 |
 | `platforms-cnki.md` | CNKI 详细 SOP（A 级，本机实测） | 操作知网 |
 | `platforms-cn.md` | 万方 + 维普（B 级） | 操作中文非知网平台 |
 | `platforms-global.md` | Google Scholar / WoS / PubMed+PMC / arXiv / ScienceDirect（B 级） | 操作外文平台 |

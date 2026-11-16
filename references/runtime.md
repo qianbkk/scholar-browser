@@ -21,7 +21,7 @@ python "$S" snapshot --tabs '<user_open_tabs 的 JSON>' --out "$D/current.json"
 # 3) 比对：只关「我开的」，用户中途自己开的一律不碰
 python "$S" plan --baseline "$D/baseline.json" --current "$D/current.json" \
     --own-ids "5,7,9" \
-    --own-pattern "oss\.wanfangdata|kns\.cnki\.net|ship-research" \
+    --own-pattern "oss\.wanfangdata|kns\.cnki\.net|<你的目标站域名>" \
     --keep-pattern "webvpn|登录|login" \
     --json-out "$D/close-plan.json"
 ```
