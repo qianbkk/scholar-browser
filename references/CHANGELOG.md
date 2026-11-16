@@ -2,6 +2,21 @@
 
 > 只在需要判断"手上这份是不是最新"或对照朋友那份版本时读。版本语义：major = 行为模式重写；minor = 新增通道/结构调整；patch = 修正与措辞。
 
+## 3.2.2（2026-11-16）frontmatter 兼容两家平台，**无行为变更**
+
+两个平台的必填字段不一致，上传时才会报错，先补齐：
+
+| 字段 | WorkBuddy 开放平台 | 腾讯 SkillHub |
+|---|---|---|
+| 展示名 | `display_name`（下划线） | `displayName`（驼峰） |
+| 标识 | `name`（kebab-case） | `slug`（发布后不可改） |
+| 简介 | `description` | `description` + `summary` |
+| 其它 | — | `license`、`agent_created` |
+
+- 新增 `slug` / `displayName` / `summary` / `license` / `agent_created`，与原有 `name` / `display_name` / `description` 并存（两套互不影响）。
+- `version` 去掉引号（SkillHub 期望裸 `x.y.z`；WorkBuddy 侧解析结果相同）。
+- 注意：`slug` 一旦发布不要再改，改了等于新建技能，历史版本与详情页会断；以后升级只递增 `version`。
+
 ## 3.2.1（2026-11-16）按官方 skill 规范补两处，**无行为变更**
 
 依据：Anthropic《Equipping agents for the real world with Agent Skills》与 Agent Skills 开放标准的通行要求（SKILL.md <500 行、引用保持一层深、description 第三人称且写清 what + when、兄弟技能重叠时指明谁优先）。
