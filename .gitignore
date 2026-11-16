@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# 本地定制（按自己课题改的分级标准，不进公开仓）
+triage.local.md
+
+# 运行时产物
+*.log
+tmp/
+dist/
+*.zip
+*.crdownload
+*.part
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini
