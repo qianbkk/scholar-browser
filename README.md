@@ -125,7 +125,7 @@ scripts/                 六个零依赖脚本（仅 Python 标准库）
 cp .git/info/exclude.sample .git/info/exclude   # 或手动把常见规则写进去
 ```
 
-打 zip 时同样排除所有点开头文件与 `__pycache__`。
+打 zip 时同样排除所有点开头文件与 `__pycache__`；许可证用 `LICENSE.md`（带扩展名，平台的白名单认它）。
 
 ## 版本
 
