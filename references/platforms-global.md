@@ -3,6 +3,8 @@
 > Google Scholar / Web of Science / PubMed+PMC / arXiv / ScienceDirect。
 > 依据标签见 `limits.md` §4；「实测」= 本机真在页面上看到的（2026-11-12 run-1、2026-11-13 run-intl-1）。
 
+> **本文件结构**：通用提示 · arXiv · PubMed / PMC · ScienceDirect (Elsevier) · Web of Science · Google Scholar · 不在表内的平台怎么处理
+
 ## 通用提示
 
 - 英文站多为普通跳转（非 SPA）→ `tab_url` 可辅助验证，但**必须与截图双验**（PubMed 校验页会让 URL 看起来像成功）。

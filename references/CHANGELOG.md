@@ -2,6 +2,18 @@
 
 > 只在需要判断"手上这份是不是最新"或对照朋友那份版本时读。版本语义：major = 行为模式重写；minor = 新增通道/结构调整；patch = 修正与措辞。
 
+## 3.2.1（2026-11-16）按官方 skill 规范补两处，**无行为变更**
+
+依据：Anthropic《Equipping agents for the real world with Agent Skills》与 Agent Skills 开放标准的通行要求（SKILL.md <500 行、引用保持一层深、description 第三人称且写清 what + when、兄弟技能重叠时指明谁优先）。
+
+- 9 个超过 100 行的 reference 开头加「本文件结构」索引行（`ROUTER` / `limits` / `discovery` / `toolchain` / `selftest` / `platforms-cn` / `platforms-cnki` / `platforms-cn-journal` / `platforms-global`）。原因：agent 常以 `head -100` 部分读取长文件，没有索引会漏看后半段。
+- `description` / `description_en` 补**负向边界**：明确本技能不用于通用网页抓取、表单填写、站点测试、商品/社媒采集——与通用浏览器技能重叠时由后者胜出，减少误触发。
+
+**评估后决定不改的三项**（记录理由，避免以后重复讨论）：
+- 不加 `assets/`：规范里 assets 放图片/模板/示例数据文件，本技能无二进制资产，模板是 markdown（放 references 更符合"文档型"）。
+- 不加 `allowed-tools`：WorkBuddy 侧对应字段是 `allowedTools`，声明后会限制脚本执行与文件读取的授权范围，行为未在本机验证，收益不明，暂缓。
+- 不删「2026-11-15 实测」这类日期：规范反对的是"易腐的时间敏感信息"（如版本号、价格、"目前最新"），本技能的日期是**证据标记**，标明结论的实测时点与来源，删掉反而降低可信度。
+
 ## 3.2.0（2026-11-16）配置分层：技能目录与个人数据彻底分离
 
 **动机**：原先个人定制文件（`triage.local.md`、`cn_journal_map.local.json`）放在技能目录里，用 zip 覆盖升级或 `git pull` 时会一并丢失。

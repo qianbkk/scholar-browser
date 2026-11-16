@@ -2,10 +2,10 @@
 name: scholar-browser
 display_name: 学术文献获取
 display_name_en: Scholar Literature Fetcher
-description: 学术文献检索与获取工作流，三级路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试 OA 直取 PDF（魔数闸门校验），失败才用用户真实浏览器登录态（Edge/Chrome 扩展）在知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect 上逐页操作获取全文；下载文件自动校验、去重、规范命名后归集到工作区。触发词：查文献、检索文献、搜论文、找文献、下载论文、下载文献、能不能下、OA 全文、高级检索、检索式、知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、机构登录态、复用浏览器登录、文献归集、下载目录不留。
+description: 学术文献检索与获取工作流，三级路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试 OA 直取 PDF（魔数闸门校验），失败才用用户真实浏览器登录态（Edge/Chrome 扩展）在知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect 上逐页操作获取全文；下载文件自动校验、去重、规范命名后归集到工作区。触发词：查文献、检索文献、搜论文、找文献、下载论文、下载文献、能不能下、OA 全文、高级检索、检索式、知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、机构登录态、复用浏览器登录、文献归集、下载目录不留。**不适用于**通用网页抓取、表单填写、站点测试、商品或社媒数据采集（那类需求改用通用浏览器技能）。
 description_zh: 宽泛发现 + OA 直取 + 真实浏览器登录态兜底，检索与下载学术文献并自动归集到工作区。
-description_en: Three-tier literature workflow - broad discovery, open-access direct fetch with magic-byte validation, then signed-in browser fallback across CNKI, Wanfang, VIP, WoS, PubMed, arXiv and ScienceDirect; auto-adopts downloads into the workspace.
-version: "3.2.0"
+description_en: Three-tier literature workflow - broad discovery, open-access direct fetch with magic-byte validation, then signed-in browser fallback across CNKI, Wanfang, VIP, WoS, PubMed, arXiv and ScienceDirect; auto-adopts downloads into the workspace. Not for general web scraping, form filling, site QA, or product/social scraping.
+version: "3.2.1"
 ---
 
 # 学术文献获取工作流（三级路由）
