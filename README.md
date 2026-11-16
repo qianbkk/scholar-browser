@@ -100,7 +100,7 @@ scripts/                 零依赖脚本（仅 Python 标准库）
 | L3 浏览器协作 | **仅 WorkBuddy** | 工具名来自其 browser-use 插件（`tabs_new` / `user_open_tabs` / `dom_cua_get_visible_dom` / `cua_click` / `tab_screenshot` / `tabs_close` 等） |
 | 其他 agent 的浏览器方案 | **未适配** | Playwright MCP、DevTools 封装、agent 内置浏览器等均未测试，**未必完全可用** |
 
-移植要做的事：把 L3 的 7 个语义动作（列浏览器 / 标签管理 / 读页面结构 / 交互 / 截图 / 导航 / 关标签）映射到目标方案，见 `references/toolchain.md` §1。两点无法靠改名解决——**登录态复用**（这里靠浏览器扩展借用你已登录的会话，换方案通常要自己登录持久化 profile）与**下载落盘**（这里靠点击触发真实下载再由脚本收件，有的方案可直接存到指定路径，归集逻辑要相应调整）。
+移植要做的事：把 L3 的 7 个语义动作（列浏览器 / 标签管理 / 读页面结构 / 交互 / 截图 / 导航 / 关标签）映射到目标方案——**动作定义在 `references/toolchain.md` §1，各方案的工具名对照与降级做法在 `references/browser-adapters.md`**（后者仅 WorkBuddy 一列实测，其余凭公开文档整理、未验证）。两点无法靠改名解决——**登录态复用**（这里靠浏览器扩展借用你已登录的会话，换方案通常要自己登录持久化 profile）与**下载落盘**（这里靠点击触发真实下载再由脚本收件，有的方案可直接存到指定路径，归集逻辑要相应调整）。
 
 ## 环境要求
 
@@ -159,7 +159,7 @@ python <skill_dir>/scripts/audit.py --verbose # 逐项列出
 
 ## 版本
 
-当前 `3.4.1`。变更记录见 `references/CHANGELOG.md`。
+当前 `3.5.0`。变更记录见 `references/CHANGELOG.md`。
 
 ## License
 

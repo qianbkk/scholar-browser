@@ -17,6 +17,7 @@
 | `limits.md` | 合规红线、登录态失效信号、文件安全契约、诚实边界 | 任何任务开始 |
 | `discovery.md` | **三级路由**：L1 渠道优先级与坑、L2 闸门与 reason 码、L3 触发判定、工具取舍 | 找文献 / 判断能否直取 / 决定要不要开浏览器 |
 | `toolchain.md` | 浏览器工具边界、DOM 与输入策略、失败回退、下载目录与回滚 | DOM 读不到 / 节点失效 / 超时 / 输入不生效 / 跑脚本 |
+| `browser-adapters.md` | 7 个语义动作 → 各方案工具名的映射参考（**仅 WorkBuddy 实测，其余参考用**）、缺能力时的降级 | 换 agent / 工具名对不上 / 手上没有浏览器 MCP |
 | `sd-batch.md` | 订阅型 PDF 落盘边界 + ScienceDirect 批量 ZIP 全流程与实测限制 | 要判断订阅 PDF 能否自动拿到 / 走 SD 批量下载 |
 | `runtime.md` | 标签页会话基线（snapshot/plan）+ 代理与邮箱配置 | 要开浏览器 / 报 timeout / 配 `SCHOLAR_EMAIL` |
 | `CHANGELOG.md` | 版本变更记录（3.0.0 → 3.1.0） | 判断手上这份是不是最新 / 对照他人版本 |
@@ -84,6 +85,7 @@ scholar-browser/
 │   ├── discovery.md         ← L1 / L2 / L3 判定与渠道优先级
 │   ├── syntax.md            ← 8 平台检索式语法与精确直达
 │   ├── toolchain.md         ← 浏览器工具边界、DOM/截图、失败回退、回滚
+│   ├── browser-adapters.md  ← 7 动作 → 各方案工具名映射（参考）
 │   ├── sd-batch.md          ← 订阅型 PDF 落盘边界 + SD 批量 ZIP
 │   ├── runtime.md           ← 标签页会话基线 + 代理/邮箱
 │   ├── CHANGELOG.md         ← 版本变更记录

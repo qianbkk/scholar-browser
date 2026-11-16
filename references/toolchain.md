@@ -21,7 +21,7 @@
 
 本 Skill 的 L3 段**按 WorkBuddy 的 browser-use 插件写成**，工具名是它的语义。其他 agent 的浏览器方案（Playwright MCP、Chrome DevTools 封装、agent 自带内置浏览器等）**目前未做适配，未必完全可用**。
 
-移植所需的能力只有 7 个，缺任何一个都要改写对应的平台 SOP：
+移植所需的能力只有 7 个，缺任何一个都要改写对应的平台 SOP。**常见方案的工具名对照与降级做法见 `browser-adapters.md`**：
 
 | # | 动作 | 本 Skill 用的工具 | 缺了会怎样 |
 |---|---|---|---|

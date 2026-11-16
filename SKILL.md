@@ -10,7 +10,7 @@ display_name_en: Scholar Literature Fetcher
 description: 学术文献检索与获取工作流，三级路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试开放获取直取 PDF（魔数闸门校验），未成功则在用户自己的浏览器（Edge/Chrome 扩展）中按平台流程逐页操作，覆盖知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect；文件自动校验、去重、规范命名后归集到工作区。触发词：查文献、检索文献、搜论文、找文献、下载论文、下载文献、能不能下、OA 全文、高级检索、检索式、知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、已登录浏览器、浏览器取全文、文献归集、下载目录不留。**不适用于**通用网页抓取、表单填写、站点测试、商品或社媒数据采集（那类需求改用通用浏览器技能）。
 description_zh: 宽泛发现 + 开放获取直取 + 浏览器协作，检索学术文献并自动归集到工作区。
 description_en: Three-tier literature workflow - broad discovery, open-access direct fetch with magic-byte validation, then browser-assisted retrieval in the user's own session across CNKI, Wanfang, VIP, WoS, PubMed, arXiv and ScienceDirect; auto-adopts downloads into the workspace. Not for general web scraping, form filling, site QA, or product/social scraping.
-version: 3.4.1
+version: 3.5.0
 ---
 
 # 学术文献获取工作流（三级路由）
@@ -20,7 +20,7 @@ version: 3.4.1
 `<skill_dir>` = **本 SKILL.md 所在目录**（用户级安装在 `~/.workbuddy/skills/scholar-browser`；不同机器、不同用户目录不同，**不要照抄任何示例绝对路径**，运行时按实际安装位置替换）。
 `<workspace>` = 当前工作区根目录。
 Python 用 PATH 上的 `python`（3.9+ 即可，仅标准库，无第三方依赖）。
-**运行环境**：脚本层（L1 / L1.5 / L2 / 归集校验）任何 agent 都可用；**L3 浏览器段按 WorkBuddy 的 browser-use 插件写成，其他 agent 的浏览器方案未做适配**——工具名不同时须按 `toolchain.md` §1 的 7 个动作自行映射。
+**运行环境**：脚本层（L1 / L1.5 / L2 / 归集校验）任何 agent 都可用；**L3 浏览器段按 WorkBuddy 的 browser-use 插件写成，其他 agent 的浏览器方案未做适配**——工具名不同时按 `browser-adapters.md` 对照映射（7 个动作 + 降级方案）。
 
 ## 1. 三级路由（先看这里，别一上来就翻页）
 
@@ -163,6 +163,7 @@ python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confi
 | **配置在哪、为什么这次行为和上次不同** | `oa_fetch.py config`（打印每项配置的实际路径与来源） |
 | **要派子代理去执行检索/下载/归集** | `executor-brief.md` |
 | DOM 读不到、超时、输入不生效、失败回退 | `toolchain.md` |
+| **换成别的 agent / 工具名对不上** | `browser-adapters.md`（7 个动作 → 各方案映射，缺能力时怎么降级） |
 | 验证/迭代某平台 SOP | `selftest.md` |
 | 这份是不是最新 / 对照朋友那份版本 | `CHANGELOG.md` |
 | 改完本 Skill 想确认没改坏 | `scripts/audit.py`（只读自检，一个命令出结论） |
@@ -190,6 +191,6 @@ python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confi
 - 完全 OA 站点也可能因 TLS 指纹被拒（MDPI/PLOS/PMC 有报告）→ L2 固有上限，不是 bug。
 - Edge 扩展偶发超时（claim/DOM/点击/finalize）：同操作最多重试一次，**不 taskkill、不反复重启**；`No current window` 且用户已授权时打开新窗口，仍失败请用户点一次扩展图标。
 - 只对 §2 列出的平台负责；其余平台不声称验证过。
-- **浏览器段目前只适配 WorkBuddy**：L3 的工具名来自其 browser-use 插件，换成 Playwright 等其他方案需自行映射（见 `toolchain.md` §1），未适配、未必完全可用；脚本层不受影响。
+- **浏览器段目前只适配 WorkBuddy**：L3 的工具名来自其 browser-use 插件，换成 Playwright 等其他方案需自行映射（见 `browser-adapters.md`），未适配、未必完全可用；脚本层不受影响。
 
 版本与变更历史见 `references/CHANGELOG.md`。
