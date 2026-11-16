@@ -117,7 +117,15 @@ scripts/                 六个零依赖脚本（仅 Python 标准库）
 
 ## 打包约定
 
-仓库里有 `.gitignore`（防止个人配置误提交），但它与 `.gitattributes` 都**不进上传包**——平台的技能包只接受源码与文档，点开头的配置文件会被判为不允许的类型。打 zip 时排除所有 `.git` / `.gitignore` / `.gitattributes` 即可。
+**仓库里不放任何点开头的配置文件**（`.gitignore`、`.gitattributes` 等）——平台的技能包只接受源码与文档，这类文件会被判为"不允许的文件类型"。
+
+忽略规则改放在 `.git/info/exclude`（本地生效、不进仓库、不会被上传）。重新 clone 后如需要，执行一次：
+
+```bash
+cp .git/info/exclude.sample .git/info/exclude   # 或手动把常见规则写进去
+```
+
+打 zip 时同样排除所有点开头文件与 `__pycache__`。
 
 ## 版本
 
