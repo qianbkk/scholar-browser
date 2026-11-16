@@ -96,7 +96,7 @@
 | `provider invocation timed out`（claim / DOM / click / finalize） | **同一操作最多重试一次**；仍失败记录并报告，不循环重试。`tabs_finalize` 超时不影响页面与交付 |
 | `tabs_new` 超时 | **先 `tabs_list` 复核再重试**——实测报警时标签页其实已创建，盲目重试会产生重复 tab（实测多出 tab 11/12）。已建就复用 |
 | `tabs_close` 超时 | **同样是假失败**（2026-11-13 实测：报 timeout 但页面已关）→ 用 `user_open_tabs` / `tabs_list` 复核，消失了就是成功，不要重复关 |
-| 任务结束还有自己开的页面 | 收尾必须清场：`tabs_close` 关掉本轮 `tabs_new` 的所有页；只保留用户明确要看的；用户原有页不动（`limits.md` §1.8） |
+| 任务结束还有自己开的页面 | 收尾必须清场：`tabs_close` 关掉本轮 `tabs_new` 的所有页；只保留用户明确要看的；用户原有页不动（`limits.md` §1 第 8 条） |
 | DOM / `cua_execute` / `cua_click` **全部**持续超时，但截图与 `tab_goto` 正常 | 判「该站不可脚本化·型 A」（维普实测，两域均复现）→ 降级为**只读截图模式**：能截到的题录照读，输入类标 `partial`，请用户手工检索一次 |
 | DOM 可读、`tab_goto` 正常，但 `dom_cua_type` 写不进 **且**截图空白拿不到坐标 | 判「该站不可脚本化·型 B」（WoS 实测）→ 降级为**只读 DOM 模式**：可读字段照读，输入类标 `partial`，请用户手工检索一次 |
 | 截图空白但 DOM 完整 | `render_blank`（ScienceDirect 详情页实测）→ 按 DOM 读，不重试截图，不据此判无权限 |

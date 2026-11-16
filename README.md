@@ -2,7 +2,7 @@
 
 学术文献检索与获取工作流（WorkBuddy / Claude Code 兼容的 `SKILL.md` 技能）。
 
-三级路由：**先宽泛发现**拿到 DOI/PMID/arXiv ID → **再尝试 OA 直取**（魔数闸门校验）→ **失败才用真实浏览器登录态**逐页操作。下载文件自动校验、去重、规范命名后归集到工作区。
+三级路由：**先宽泛发现**拿到 DOI/PMID/arXiv ID → **再尝试 OA 直取**（魔数闸门校验）→ **未成功再在你的浏览器里**按平台流程逐页操作。下载文件自动校验、去重、规范命名后归集到工作区。
 
 ## 为什么不是"一键下载"
 
@@ -13,7 +13,7 @@
 | L1 宽泛发现 | 主题 → 题名 + 标识符（OpenAlex / Crossref / 站内检索） | 高 |
 | L1.5 中文期刊官网 | 中文 DOI → 官网真 PDF（可读、非加密，优于知网） | 取决于刊 |
 | L2 OA 直取 | DOI → PDF，脚本发标准 HTTP 请求，不开浏览器 | **实测 33%**（3 个真实 DOI） |
-| L3 登录态兜底 | 需机构权限/交互的全文，用用户自己已登录的浏览器 | 取决于权限 |
+| L3 浏览器协作 | 需登录或需交互的全文，在你自己的浏览器里逐页操作 | 取决于权限 |
 
 L2 只有三分之一命中，所以 L3 不能省——但也不该默认走。先判 `reason` 码再决定开不开浏览器，是这个技能的主要价值。
 
@@ -74,18 +74,20 @@ references/
   platforms-cn-journal.md 中文期刊官网
   platforms-global.md    GS / WoS / PubMed / arXiv / ScienceDirect
   sd-batch.md            订阅型 PDF 落盘边界 + 批量 ZIP
-  runtime.md             标签页会话基线 + 代理/邮箱
+  runtime.md             标签页会话基线 + 网络出口 / 邮箱
   triage.md              文献价值分级（方法模板，可按自己课题替换）
   selftest.md            平台 SOP 自测协议
   executor-brief.md      派子代理的指令模板
   CHANGELOG.md           版本记录
-scripts/                 六个零依赖脚本（仅 Python 标准库）
+scripts/                 零依赖脚本（仅 Python 标准库）
   oa_fetch.py            L1 检索 / L2 直取 / meta / batch / checklist / check
   fetch_cn_journal.py    L1.5 中文期刊官网 PDF
   litadopt.py            下载归集（基线 → 扫描 → 归集 → 校验 → 回滚）
   sd_zip.py              ScienceDirect 批量 ZIP 导入
   ris_meta.py            RIS 题录 + 出版商原文摘要
   tab_session.py         标签页基线快照与关闭计划
+  audit.py               自检：一致性 / 引用完整性 / 脚本可用性 / 发布卫生
+  _config.py             内部模块（非 CLI）：配置分层解析
 ```
 
 渐进式披露：SKILL.md 常驻上下文，references 按需加载（单次任务最多再加载 3 个）。
@@ -119,17 +121,35 @@ scripts/                 六个零依赖脚本（仅 Python 标准库）
 
 **仓库里不放任何点开头的配置文件**（`.gitignore`、`.gitattributes` 等）——平台的技能包只接受源码与文档，这类文件会被判为"不允许的文件类型"。
 
-忽略规则改放在 `.git/info/exclude`（本地生效、不进仓库、不会被上传）。重新 clone 后如需要，执行一次：
+忽略规则改放在 `.git/info/exclude`（本地生效、不进仓库、不会被上传）。重新 clone 后如需要，把这几行追加进去：
 
 ```bash
-cp .git/info/exclude.sample .git/info/exclude   # 或手动把常见规则写进去
+cat >> .git/info/exclude <<'EOF'
+__pycache__/
+*.py[cod]
+*.log
+tmp/
+dist/
+*.zip
+EOF
 ```
 
 打 zip 时同样排除所有点开头文件与 `__pycache__`；许可证用 `LICENSE.md`（带扩展名，平台的白名单认它）。
 
+## 自检
+
+改完技能或发布前跑一次，只读、不改文件：
+
+```bash
+python <skill_dir>/scripts/audit.py          # 只看结论
+python <skill_dir>/scripts/audit.py --verbose # 逐项列出
+```
+
+查这些：frontmatter 字段与格式、三处版本号是否一致、ROUTER 是否漏登记文件、文档引用的文件是否存在、`§x.y` 交叉引用是否有效、是否有未定义的常量、脚本能否编译并响应 `--help`、示例参数是否真实定义、是否混入身份信息或点文件。退出码 0 表示全通过。
+
 ## 版本
 
-当前 `3.3.0`。变更记录见 `references/CHANGELOG.md`。
+当前 `3.4.0`。变更记录见 `references/CHANGELOG.md`。
 
 ## License
 

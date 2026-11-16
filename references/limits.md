@@ -123,7 +123,7 @@
 
 ## 5. 单篇订阅 PDF 的落盘边界（2026-11-13 实测，同日更正）
 
-> **结论先行**：ScienceDirect **多选 ≥2 篇 → `Download N articles` 会直接下载 ZIP**，不经过阅读器、不弹「另存为」 → 订阅型 PDF **有**可自动落盘的通道，走 `SKILL.md §7.1` + `scripts/sd_zip.py`。
+> **结论先行**：ScienceDirect **多选 ≥2 篇 → `Download N articles` 会直接下载 ZIP**，不经过阅读器、不弹「另存为」 → 订阅型 PDF **有**可自动落盘的通道，走 `sd-batch.md` + `scripts/sd_zip.py`。
 > 本节记录的是**单篇路径**（以及没有批量通道的站点：Springer / Wiley / SAGE）为什么走不通，以及不要重复试的方案。
 > **教训**：「我试过的都失败」≠「这不可能」。发现新通道时要同步回来改这一节，别把阶段结论写成硬边界。
 

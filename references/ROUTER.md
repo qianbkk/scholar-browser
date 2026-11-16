@@ -35,6 +35,7 @@
 | `scripts/litadopt.py` | 下载归集 CLI：`init-baseline` / `scan-new` / `adopt` / `verify` / `report` / `rollback` / `purge` | 由 SKILL.md 命令直接调用，不需阅读理解 |
 | `scripts/tab_session.py` | 标签页会话基线：`snapshot`（存 user_open_tabs）/ `plan`（比对后只关本轮新增页，输出 CLOSE/ASK） | 控制浏览器前后各跑一次 |
 | `scripts/_config.py` | 内部模块（非 CLI）：配置分层解析，项目级 > 用户级 `~/.scholar-browser` > 内置；全部只读 | 由其它脚本 import，不直接调用 |
+| `scripts/audit.py` | 自检（只读）：frontmatter / 版本一致性 / ROUTER 登记 / 引用与章节 / 脚本可用性 / 发布卫生 | 改完 skill 或发布前跑一次 |
 
 ## 路由表
 
@@ -100,7 +101,8 @@ scholar-browser/
     ├── ris_meta.py          ← RIS 题录 + 出版商原文摘要解析
     ├── litadopt.py          ← 下载归集（含 rollback / purge）
     ├── tab_session.py       ← 标签页基线快照 / 关闭计划（snapshot / plan）
-    └── _config.py           ← 配置分层解析（内部模块，非 CLI）
+    ├── _config.py           ← 配置分层解析（内部模块，非 CLI）
+    └── audit.py             ← 自检（只读，可随时跑）
 ```
 
 1. **此目录只放 Skill 本体**：1 个 `SKILL.md` + `references/*.md` + `scripts/*.py`（+ 仓库文件 `README.md` / `LICENSE` / `.gitignore` / `.gitattributes`）。不存检索结果、下载文件、报告、备份、截图——那些归 `<workspace>/文献/` 与 `<workspace>/.workbuddy/tmp/`。

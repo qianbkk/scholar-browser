@@ -32,6 +32,8 @@ import urllib.request
 import _config  # 同目录内部模块：配置分层解析（项目 > 用户 > 内置）
 
 PDF_MAGIC = b"%PDF-"
+# 未下完的临时后缀：命中即判 partial，不做完整性校验
+PARTIAL_SUFFIX = (".part", ".partial", ".crdownload", ".download", ".tmp")
 UA_TMPL = "scholar-browser/3.0 (academic OA fetch; contact: {email})"
 DEFAULT_UA = "scholar-browser/3.0 (academic OA fetch)"
 
@@ -1093,7 +1095,7 @@ def main():
 
     def add_net(sp):
         sp.add_argument("--email", help="真实邮箱（Unpaywall 必需、Crossref polite pool 建议）；缺省依次读 SCHOLAR_EMAIL、config.json")
-        sp.add_argument("--proxy", help="显式代理，如 http://127.0.0.1:7890（默认直连，不用代理）")
+        sp.add_argument("--proxy", help="显式代理，如 http://127.0.0.1:<端口>（默认直连，不用代理）")
         sp.add_argument("--no-proxy", action="store_true", help="强制直连（默认即直连，保留兼容）")
         sp.add_argument(
             "--auto-proxy",

@@ -10,7 +10,7 @@ display_name_en: Scholar Literature Fetcher
 description: 学术文献检索与获取工作流，三级路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试开放获取直取 PDF（魔数闸门校验），未成功则在用户自己的浏览器（Edge/Chrome 扩展）中按平台流程逐页操作，覆盖知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect；文件自动校验、去重、规范命名后归集到工作区。触发词：查文献、检索文献、搜论文、找文献、下载论文、下载文献、能不能下、OA 全文、高级检索、检索式、知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、已登录浏览器、浏览器取全文、文献归集、下载目录不留。**不适用于**通用网页抓取、表单填写、站点测试、商品或社媒数据采集（那类需求改用通用浏览器技能）。
 description_zh: 宽泛发现 + 开放获取直取 + 浏览器协作，检索学术文献并自动归集到工作区。
 description_en: Three-tier literature workflow - broad discovery, open-access direct fetch with magic-byte validation, then browser-assisted retrieval in the user's own session across CNKI, Wanfang, VIP, WoS, PubMed, arXiv and ScienceDirect; auto-adopts downloads into the workspace. Not for general web scraping, form filling, site QA, or product/social scraping.
-version: 3.3.0
+version: 3.4.0
 ---
 
 # 学术文献获取工作流（三级路由）
@@ -103,6 +103,9 @@ browsers_list → browser_info → user_open_tabs → snapshot 存基线 → tab
 # 配置诊断：每项配置实际生效的位置与来源（project / user / 内置）
 python "<skill_dir>/scripts/oa_fetch.py" config
 
+# 自检（只读）：一致性 / 引用完整性 / 脚本可用性 / 发布卫生
+python "<skill_dir>/scripts/audit.py"
+
 # L1 发现
 python "<skill_dir>/scripts/oa_fetch.py" search --query "<关键词>" --from-year 2020 --limit 25 --field title_abstract --out <dir>/q1.json
 python "<skill_dir>/scripts/oa_fetch.py" cite --doi <种子DOI> --direction cited_by --limit 30
@@ -161,6 +164,7 @@ python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confi
 | DOM 读不到、超时、输入不生效、失败回退 | `toolchain.md` |
 | 验证/迭代某平台 SOP | `selftest.md` |
 | 这份是不是最新 / 对照朋友那份版本 | `CHANGELOG.md` |
+| 改完本 Skill 想确认没改坏 | `scripts/audit.py`（只读自检，一个命令出结论） |
 
 ## 6. 交付标准：每篇都要给出「能自己继续」的东西
 
