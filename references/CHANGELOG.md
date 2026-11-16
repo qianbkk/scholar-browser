@@ -11,6 +11,9 @@ SKILL.md 从 289 行压到 178 行，把"只在特定场景才需要"的细节�
 - 新增 `references/CHANGELOG.md`：本文件（原 SKILL §10）。
 - `SKILL.md` 的 §2 平台表、§3 红线、§8 已知限制改为"摘要 + 指针"，细节仍在 `limits.md` / `toolchain.md` / `platforms-*.md`。
 - frontmatter 补 `display_name` / `display_name_en`（开放平台 / SkillHub 上架的必填字段，本地使用不受影响）。
+- **公开前安全脱敏**：移除学校名、机构码、webvpn 真实 hash、本机代理端口，统一改为 `<学校域名>` / `<机构码>` / `<端口>` 占位（原则：机构凭据与本校入口一律不入库）。
+- **课题信息与仓库解耦**：`triage.md` 改为通用模板（分级方法保留，课题坐标改为占位；个人定制版另存 `triage.local.md`，已 `.gitignore`）；`selftest.md` / `discovery.md` / `platforms-cnki.md` 的检索示例换成中性领域词。
+- 新增仓库文件：`README.md`、`LICENSE`（MIT）、`.gitignore`、`.gitattributes`；仓库根目录即技能目录，可直接被 SkillHub / 开放平台从 GitHub 导入。
 - 同步 `ROUTER.md` 文件清单与目录树。
 
 ## 3.0.1（2026-11-16）文档一致性整理，**无行为变更**

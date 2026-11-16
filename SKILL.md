@@ -147,7 +147,7 @@ python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confi
 | 操作 WoS / PubMed / arXiv / ScienceDirect / GS | `platforms-global.md` |
 | **订阅型 PDF 能不能自动落盘 / SD 批量 ZIP** | `sd-batch.md` |
 | **要开浏览器：标签页基线 / 代理 / 邮箱** | `runtime.md` |
-| **判断某篇值不值得读/存（A/B/C/D 分级）** | `triage.md` |
+| **判断某篇值不值得读/存（A/B/C/D 分级）** | `triage.md`（通用模板）；同目录有 `triage.local.md` 时**优先读它**（本地定制，不入库） |
 | **要派子代理去执行检索/下载/归集** | `executor-brief.md` |
 | DOM 读不到、超时、输入不生效、失败回退 | `toolchain.md` |
 | 验证/迭代某平台 SOP | `selftest.md` |

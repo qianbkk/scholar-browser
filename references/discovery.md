@@ -87,10 +87,10 @@
 
 | 坑 | 现象 | 正确做法 |
 |---|---|---|
-| **长组合词** | `surrogate model blast impact machine learning` 只回 10 条，而拆成 `multi-fidelity surrogate model`（3138 条）+ `machine learning blast loading`（214 条）才对 | **方法词与场景词分开搜**，各自取候选后取交集 |
-| **一词多义** | `coupling` 在爆破工程里指"不耦合装药"，把岩石爆破全搜进来了 | 加 `--field title_abstract`，并在词里带上义项（`blast and fragment`、`warhead`） |
-| **全字段搜索太宽** | `flight deck damage` 命中 1433 条，混进"飞行甲板人为因素""石油泄漏" | 用 `--field title_abstract`；必要时 `--field title` |
-| **过度限定** | `stiffened plate blast fragment` 在题摘里要求四词全中 → 0 条 | 先跑宽词（`stiffened plate blast`），再用结果筛 |
+| **长组合词** | 五六个词塞进一个 query，只回个位数；拆成「方法词组」+「场景词组」分别跑，各回上千条 | **方法词与场景词分开搜**，各自取候选后取交集 |
+| **一词多义** | 同一个词在另一学科里指完全不同的概念（如 `coupling` 在工程与物理里义项不同），把无关文献全搜进来 | 加 `--field title_abstract`，并在词里带上义项（`<词A> and <词B>` 这类双词锚定） |
+| **全字段搜索太宽** | 两个常用词全字段检索命中上千条，混进大量同名不同义的领域 | 用 `--field title_abstract`；必要时 `--field title` |
+| **过度限定** | 题摘里要求四五个词全中 → 0 条 | 先跑宽词（两三个），再用结果筛 |
 | **只跑一次就交差** | 单组最多 50 条，必然漏 | 见 §2.4；另按年份分箱（老文献按被引、新文献按时间） |
 
 **跑完必须做的一步**：把多组结果合并去重，按"命中该主题的词数"和"是否近年"打分分桶。一组结果里反复出现的条目才是核心，只出现一次的通常是噪音。

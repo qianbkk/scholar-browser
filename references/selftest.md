@@ -36,14 +36,16 @@ python "<skill_dir>/scripts/oa_fetch.py" check  --file "<tmp>/<name>.pdf"
 
 | # | 平台 | 覆盖意图 | 入口 | 低风险检索式 | 等级 |
 |---|---|---|---|---|---|
-| 1 | CNKI | 中文付费库 + 登录态（A 级回归） | `kns.cnki.net` 一框式 | 完整题名 `冲击波和破片联合作用下I型夹层板毁伤仿真` | A |
-| 2 | 万方 | 中文第二库 | `www.wanfangdata.com.cn` | `冲击波 破片 耦合` | B |
-| 3 | 维普 | 中文第三库 | `www.cqvip.com` | `冲击波 破片` | B |
-| 4 | Google Scholar | 发现层（**只读一屏，禁翻页**） | `scholar.google.com` | `"blast and fragment" coupling` | B |
-| 5 | Web of Science | 外文索引 / 非全文宿主 | 机构入口 | `TI=(blast fragment coupling)` | B |
-| 6 | PubMed | 字段标签 + 摘要 | `pubmed.ncbi.nlm.nih.gov` | `"surrogate model"[ti]` | B |
-| 7 | arXiv | OA 预印本 / 静态摘要 | `arxiv.org` | `ti:"surrogate model"` | B |
-| 8 | ScienceDirect | 出版商 / 两步下载 | `sciencedirect.com` | `"blast and fragment loading"` | B |
+| 1 | CNKI | 中文付费库 + 登录态（A 级回归） | `kns.cnki.net` 一框式 | 完整题名（挑一篇你手头已有的中文论文题名，应命中唯一结果） | A |
+| 2 | 万方 | 中文第二库 | `www.wanfangdata.com.cn` | `石墨烯 传感器` | B |
+| 3 | 维普 | 中文第三库 | `www.cqvip.com` | `石墨烯` | B |
+| 4 | Google Scholar | 发现层（**只读一屏，禁翻页**） | `scholar.google.com` | `"graphene sensor"` | B |
+| 5 | Web of Science | 外文索引 / 非全文宿主 | 机构入口 | `TI=(graphene AND sensor)` | B |
+| 6 | PubMed | 字段标签 + 摘要 | `pubmed.ncbi.nlm.nih.gov` | `"machine learning"[ti]` | B |
+| 7 | arXiv | OA 预印本 / 静态摘要 | `arxiv.org` | `ti:"diffusion model"` | B |
+| 8 | ScienceDirect | 出版商 / 两步下载 | `sciencedirect.com` | `"graphene oxide membrane"` | B |
+
+> 检索式用**中性领域词**，只为验证 SOP 通不通，与任何具体课题无关。换成自己的词也一样——这里测的是流程，不是相关性。
 
 预算不足时按 1/2/6/7/8 裁剪（覆盖中文/索引/OA/出版商四类），被裁的在 `summary.skipped` 列出。
 
