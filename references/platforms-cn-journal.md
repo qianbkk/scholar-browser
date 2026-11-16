@@ -66,12 +66,12 @@ HTTP/2 502
 
 > 表里多是"⚠"很正常：**官网可用性随站点改版漂移**，别指望内置表长期有效。表的作用是给出"怎么拼 URL"的范式，不是保证能下。
 
-## 加你自己的刊（本地映射，不入库）
+## 加你自己的刊（用户级映射，不随技能升级丢失）
 
-内置表只放通用刊。你自己的目标刊（含方向性强的）写进本地文件，脚本启动时自动合并：
+内置表只放通用刊。你自己的目标刊写进用户级配置，脚本启动时自动合并：
 
 ```json
-// scripts/cn_journal_map.local.json   ← 该文件已在 .gitignore
+// ~/.scholar-browser/cn_journal_map.json   ← 只在某个项目用就放 <项目>/.scholar-browser/
 {
   "10.xxxxx": "https://<刊官网>/cn/article/doi/{doi}",
   "10.yyyyy": "https://<刊官网>/hncl/article/html/{tail}"
@@ -79,8 +79,9 @@ HTTP/2 502
 ```
 
 - 占位符：`{doi}` 完整 DOI（已 URL 编码）、`{tail}` DOI 斜杠后的部分
-- 文件缺失或 JSON 写错 → 脚本只打印一行 `local map skipped`，用内置表继续跑，不会崩
-- **别把这个文件提交到公开仓库**：它等同暴露你的研究方向
+- 生效顺序：`<项目>/.scholar-browser/cn_journal_map.json` > `~/.scholar-browser/cn_journal_map.json` > 内置 5 本
+- 文件缺失或 JSON 写错 → 只打印一行 `config skipped`，用内置表继续跑，不会崩
+- 查当前生效的路径与合并条数：`python <skill_dir>/scripts/oa_fetch.py config`
 
 ## 站点异常处置
 

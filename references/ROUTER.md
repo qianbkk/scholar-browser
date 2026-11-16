@@ -23,16 +23,16 @@
 | `platforms-cnki.md` | CNKI 详细 SOP（A 级，本机实测） | 操作知网 |
 | `platforms-cn.md` | 万方 + 维普（B 级） | 操作中文非知网平台 |
 | `platforms-global.md` | Google Scholar / WoS / PubMed+PMC / arXiv / ScienceDirect（B 级） | 操作外文平台 |
-| `triage.md` | 文献价值分级**通用模板**（A/B/C/D + 关键词翻译法），不含任何具体课题 | 检索回来一堆结果、要决定下哪些/读哪些 |
-| `triage.local.md` | 本地定制版分级标准（含具体课题坐标；`.gitignore` 排除，**不入库、不进分发包**） | 存在时**优先于** `triage.md` |
+| `triage.md` | 文献价值分级**内置模板**（A/B/C/D + 关键词翻译法），不含任何具体课题 | 检索回来一堆结果、要决定下哪些/读哪些 |
 | `selftest.md` | 子代理自测协议（含 L2 验证）+ 回报 JSON | 要验证或迭代某平台 SOP |
 | `executor-brief.md` | **派子代理的指令模板**：硬预算、四条死法、停机条件、回报结构、验收清单 | 每次要派执行者做检索/下载/归集 |
 | `scripts/fetch_cn_journal.py` | L1.5：中文期刊 DOI → 官网真 PDF（按刊名前缀路由 + 多候选 + 魔数校验 + JSON 结果表） | 由 SKILL.md 命令直接调用，不需阅读理解 |
-| `scripts/oa_fetch.py` | L1：`search` 关键词检索 / `cite` 引文滚雪球；L2：`meta` 元数据兜底 / `resolve`+`fetch` 单篇直取 / `batch` 批量直取 / `checklist` 生成手动另存清单 / `check` 文件校验 | 由 SKILL.md 命令直接调用，不需阅读理解 |
+| `scripts/oa_fetch.py` | L1：`search` 关键词检索 / `cite` 引文滚雪球；L2：`meta` 元数据兜底 / `resolve`+`fetch` 单篇直取 / `batch` 批量直取 / `checklist` 生成手动另存清单 / `check` 文件校验 / `config` 配置诊断 | 由 SKILL.md 命令直接调用，不需阅读理解 |
 | `scripts/sd_zip.py` | ScienceDirect 批量下载 ZIP 导入：解压 + 魔数校验 + MD5 去重 + `NN_` 编号落位 | 由 SKILL.md 命令直接调用，不需阅读理解 |
 | `scripts/ris_meta.py` | 出版商 RIS 导出解析：题录 + 出版商原文摘要，输出 JSON/Markdown | 拿不到全文、要补全面准确的摘要时 |
 | `scripts/litadopt.py` | 下载归集 CLI：`init-baseline` / `scan-new` / `adopt` / `verify` / `report` / `rollback` / `purge` | 由 SKILL.md 命令直接调用，不需阅读理解 |
 | `scripts/tab_session.py` | 标签页会话基线：`snapshot`（存 user_open_tabs）/ `plan`（比对后只关本轮新增页，输出 CLOSE/ASK） | 控制浏览器前后各跑一次 |
+| `scripts/_config.py` | 内部模块（非 CLI）：配置分层解析，项目级 > 用户级 `~/.scholar-browser` > 内置；全部只读 | 由其它脚本 import，不直接调用 |
 
 ## 路由表
 
@@ -88,7 +88,7 @@ scholar-browser/
 │   ├── platforms-cnki.md    ┐
 │   ├── platforms-cn.md      ├ 平台 SOP：确定要操作该平台时才读
 │   ├── platforms-global.md  ┘
-│   ├── triage.md            ← 分级通用模板（triage.local.md 为本地定制，不入库）
+│   ├── triage.md            ← 分级**内置模板**（个人定制放 ~/.scholar-browser/triage.md）
 │   ├── selftest.md          ← 平台 SOP 自测协议
 │   └── executor-brief.md    ← 派子代理的指令模板
 └── scripts/                 ← 零依赖 CLI（仅 Python 标准库），由 SKILL.md 直接调用
@@ -97,11 +97,12 @@ scholar-browser/
     ├── sd_zip.py            ← ScienceDirect 批量 ZIP 导入
     ├── ris_meta.py          ← RIS 题录 + 出版商原文摘要解析
     ├── litadopt.py          ← 下载归集（含 rollback / purge）
-    └── tab_session.py       ← 标签页基线快照 / 关闭计划（snapshot / plan）
+    ├── tab_session.py       ← 标签页基线快照 / 关闭计划（snapshot / plan）
+    └── _config.py           ← 配置分层解析（内部模块，非 CLI）
 ```
 
 1. **此目录只放 Skill 本体**：1 个 `SKILL.md` + `references/*.md` + `scripts/*.py`（+ 仓库文件 `README.md` / `LICENSE` / `.gitignore` / `.gitattributes`）。不存检索结果、下载文件、报告、备份、截图——那些归 `<workspace>/文献/` 与 `<workspace>/.workbuddy/tmp/`。
-   - **唯一允许的本地文件是 `triage.local.md`**（个人分级标准）：必须写进 `.gitignore`，打包分发时排除；它不进 GitHub、不进 zip，只在本机生效。
+   - **技能目录不放任何个人配置**：分级标准、期刊映射、邮箱等一律放 `~/.scholar-browser/`（用户级）或 `<workspace>/.scholar-browser/`（项目级）。这样技能目录可被 zip 覆盖 / `git pull` / 市场更新而无损。查找顺序由 `scripts/_config.py` 统一实现（项目 > 用户 > 内置），`oa_fetch.py config` 可打印实际来源。
 2. **不留编译缓存**：`__pycache__/`、`.pyc`、临时脚本、日志都不放这里（可再生，且会让人误以为是第五个脚本）。
 3. **增删文件必须同步本文件的「文件清单」表**；改结论要同步 `SKILL.md`、`limits.md`、对应 `platforms-*.md` 三处，不要只改一处留矛盾。
 4. 每次改动后跑一遍验收：脚本语法编译、各脚本 `--help`、文档里的 Markdown 文件引用是否都存在；验收脚本样例见 `<workspace>/.workbuddy/tmp/lit-search/acceptance.py`。

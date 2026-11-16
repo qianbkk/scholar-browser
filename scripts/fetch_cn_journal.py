@@ -11,6 +11,8 @@
   * 魔数比较用 head[:4] == b"%PDF"
 """
 import argparse, csv, hashlib, json, os, re, subprocess, sys, time
+
+import _config
 from urllib.parse import quote
 
 # DOI 前缀 → 文章页模板。内置只放通用刊（力学 / 物理 / 工程类）。
@@ -25,25 +27,35 @@ TPL = {
     "10.7511":  "https://cvl.cstam.org.cn/article/doi/{doi}",          # 计算力学学报
 }
 
-LOCAL_MAP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cn_journal_map.local.json")
+SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def load_local_map(path=LOCAL_MAP):
-    """合并本地映射（可选）。文件缺失或格式错就静默跳过，不影响内置表。"""
-    if not os.path.exists(path):
-        return 0
-    try:
-        with open(path, encoding="utf-8") as f:
-            extra = json.load(f)
-    except Exception as e:
-        print("local map skipped: %s" % e)
-        return 0
-    n = 0
-    for k, v in (extra or {}).items():
-        if isinstance(k, str) and isinstance(v, str) and ("{doi}" in v or "{tail}" in v):
-            TPL[k] = v
-            n += 1
-    return n
+def load_local_map():
+    """按 用户 > 项目 逐层合并映射（后者覆盖同键）；返回 (合并条数, 来源列表)。"""
+    files = _config.find_all("cn_journal_map.json", SKILL_DIR,
+                             legacy="scripts/cn_journal_map.local.json")
+    total, used = 0, []
+    for path, src in files:
+        try:
+            with open(path, encoding="utf-8") as f:
+                extra = json.load(f)
+        except Exception as e:
+            print("config skipped: %s (%s)" % (e, path))
+            continue
+        n = 0
+        for k, v in (extra or {}).items():
+            if isinstance(k, str) and isinstance(v, str) and ("{doi}" in v or "{tail}" in v):
+                TPL[k] = v
+                n += 1
+        if n:
+            total += n
+            used.append("%s:%d" % (src, n))
+        h = _config.hint_legacy(src, path)
+        if h:
+            print(h)
+    if total:
+        print("journal map: +%d (%s)" % (total, ", ".join(used)))
+    return total, used
 
 
 def curl(url, out=None, timeout=60, referer=None):

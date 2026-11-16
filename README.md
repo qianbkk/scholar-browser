@@ -35,6 +35,30 @@ Windows 对应 `C:\Users\<你>\.workbuddy\skills\scholar-browser`。放好后新
 
 放进对应 agent 的 skills 目录（同为 `SKILL.md` 格式）。
 
+## 配置放哪（升级不丢）
+
+技能目录是"程序"，会被 zip 覆盖、`git pull`、市场更新替换。**个人配置不要放进去。**
+
+```
+<项目>/.scholar-browser/<文件名>     ← 最高优先级，只在当前项目生效
+~/.scholar-browser/<文件名>          ← 用户级，跨项目复用（推荐）
+<技能目录>/...                       ← 内置模板，只读，随升级替换
+```
+
+| 文件 | 作用 |
+|---|---|
+| `triage.md` | 你的文献分级标准（内置模板在 `references/triage.md`） |
+| `cn_journal_map.json` | DOI 前缀 → 期刊官网模板，扩展内置的 5 本刊 |
+| `config.json` | 默认邮箱：`{"email": "you@example.com"}` |
+
+查任何一项**实际生效**的位置与来源：
+
+```bash
+python <skill_dir>/scripts/oa_fetch.py config
+```
+
+首次使用建议：`cp references/triage.md ~/.scholar-browser/triage.md` 再改成自己的课题。
+
 ## 目录结构
 
 ```

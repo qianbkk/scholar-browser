@@ -5,7 +5,7 @@ display_name_en: Scholar Literature Fetcher
 description: 学术文献检索与获取工作流，三级路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试 OA 直取 PDF（魔数闸门校验），失败才用用户真实浏览器登录态（Edge/Chrome 扩展）在知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect 上逐页操作获取全文；下载文件自动校验、去重、规范命名后归集到工作区。触发词：查文献、检索文献、搜论文、找文献、下载论文、下载文献、能不能下、OA 全文、高级检索、检索式、知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、机构登录态、复用浏览器登录、文献归集、下载目录不留。
 description_zh: 宽泛发现 + OA 直取 + 真实浏览器登录态兜底，检索与下载学术文献并自动归集到工作区。
 description_en: Three-tier literature workflow - broad discovery, open-access direct fetch with magic-byte validation, then signed-in browser fallback across CNKI, Wanfang, VIP, WoS, PubMed, arXiv and ScienceDirect; auto-adopts downloads into the workspace.
-version: "3.1.1"
+version: "3.2.0"
 ---
 
 # 学术文献获取工作流（三级路由）
@@ -95,6 +95,9 @@ browsers_list → browser_info → user_open_tabs → snapshot 存基线 → tab
 ### 脚本命令
 
 ```bash
+# 配置诊断：每项配置实际生效的位置与来源（project / user / 内置）
+python "<skill_dir>/scripts/oa_fetch.py" config
+
 # L1 发现
 python "<skill_dir>/scripts/oa_fetch.py" search --query "<关键词>" --from-year 2020 --limit 25 --field title_abstract --out <dir>/q1.json
 python "<skill_dir>/scripts/oa_fetch.py" cite --doi <种子DOI> --direction cited_by --limit 30
@@ -147,7 +150,8 @@ python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confi
 | 操作 WoS / PubMed / arXiv / ScienceDirect / GS | `platforms-global.md` |
 | **订阅型 PDF 能不能自动落盘 / SD 批量 ZIP** | `sd-batch.md` |
 | **要开浏览器：标签页基线 / 代理 / 邮箱** | `runtime.md` |
-| **判断某篇值不值得读/存（A/B/C/D 分级）** | `triage.md`（通用模板）；同目录有 `triage.local.md` 时**优先读它**（本地定制，不入库） |
+| **判断某篇值不值得读/存（A/B/C/D 分级）** | 分级标准按序生效：`<项目>/.scholar-browser/triage.md` > `~/.scholar-browser/triage.md` > 内置 `triage.md`（模板） |
+| **配置在哪、为什么这次行为和上次不同** | `oa_fetch.py config`（打印每项配置的实际路径与来源） |
 | **要派子代理去执行检索/下载/归集** | `executor-brief.md` |
 | DOM 读不到、超时、输入不生效、失败回退 | `toolchain.md` |
 | 验证/迭代某平台 SOP | `selftest.md` |

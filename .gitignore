@@ -3,8 +3,9 @@ __pycache__/
 *.py[cod]
 *.pyo
 
-# 本地定制（按自己课题改的分级标准、期刊映射，不进公开仓）
-triage.local.md
+# 个人配置不放在技能目录：用户级 ~/.scholar-browser/，项目级 <workspace>/.scholar-browser/
+# 仅在从旧版本升级、尚未迁移时可能残留（脚本会提示 deprecation）：
+references/triage.local.md
 scripts/cn_journal_map.local.json
 
 # 运行时产物

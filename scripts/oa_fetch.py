@@ -29,6 +29,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import _config  # 同目录内部模块：配置分层解析（项目 > 用户 > 内置）
+
 PDF_MAGIC = b"%PDF-"
 UA_TMPL = "scholar-browser/3.0 (academic OA fetch; contact: {email})"
 DEFAULT_UA = "scholar-browser/3.0 (academic OA fetch)"
@@ -998,6 +1000,85 @@ def make_checklist(items, title="待下载清单"):
     return "\n".join(L) + "\n"
 
 
+SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def resolve_email(cli_value):
+    """邮箱来源：--email > SCHOLAR_EMAIL > config.json（项目 > 用户 > 无）。"""
+    if cli_value:
+        return cli_value, "cli"
+    env = (os.environ.get("SCHOLAR_EMAIL") or "").strip()
+    if env:
+        return env, "env"
+    path, src = _config.find("config.json", SKILL_DIR)
+    if path:
+        try:
+            with open(path, encoding="utf-8") as f:
+                v = (json.load(f) or {}).get("email")
+            if isinstance(v, str) and "@" in v:
+                return v.strip(), "config(%s)" % src
+        except Exception:
+            pass
+    return None, "none"
+
+
+def _mask_mail(m):
+    if not m or "@" not in m:
+        return m
+    u, d = m.split("@", 1)
+    return (u[:1] + "***@" + d) if u else "***@" + d
+
+
+def _map_count(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+        return len(d) if isinstance(d, dict) else 0
+    except Exception:
+        return 0
+
+
+def build_config_report(email, email_src, a):
+    """各项配置的实际来源（诊断用）：只报路径与条数，不打印文件内容。"""
+    items = {}
+    for name, legacy in (
+        ("triage.md", "references/triage.local.md"),
+        ("cn_journal_map.json", "scripts/cn_journal_map.local.json"),
+        ("config.json", None),
+    ):
+        path, src = _config.find(name, SKILL_DIR, legacy=legacy)
+        items[name] = {
+            "source": src,
+            "path": str(path) if path else None,
+            "candidates": _config.all_paths(name, SKILL_DIR, legacy=legacy),
+        }
+    map_files = _config.find_all("cn_journal_map.json", SKILL_DIR,
+                                 legacy="scripts/cn_journal_map.local.json")
+    builtin = 5
+    extra = sum(_map_count(p) for p, _ in map_files)
+    items["cn_journal_map.json"]["merged_from"] = [
+        {"source": src, "path": str(p), "count": _map_count(p)} for p, src in map_files
+    ]
+    jm = items["cn_journal_map.json"]
+    if getattr(a, "proxy", None):
+        pmode = "explicit(%s)" % a.proxy
+    elif getattr(a, "auto_proxy", False):
+        pmode = "auto(direct->env)"
+    else:
+        pmode = "direct(default)"
+    pj = _config.effective_project_dir(skill_dir=SKILL_DIR)
+    return {
+        "skill_dir": SKILL_DIR,
+        "user_config_dir": str(_config.user_dir()),
+        "project_config_dir": str(pj) if pj else None,
+        "items": items,
+        "journal_map": {"builtin": builtin, "extra": extra, "merged": builtin + extra},
+        "email": {"value": _mask_mail(email), "source": email_src},
+        "proxy": pmode,
+        "hint": _config.hint_legacy(jm["source"], jm["path"] or ""),
+    }
+
+
 def main():
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -1011,7 +1092,7 @@ def main():
     sub = p.add_subparsers(dest="cmd", required=True)
 
     def add_net(sp):
-        sp.add_argument("--email", help="真实邮箱（Unpaywall 必需、Crossref polite pool 建议）；缺省读 SCHOLAR_EMAIL")
+        sp.add_argument("--email", help="真实邮箱（Unpaywall 必需、Crossref polite pool 建议）；缺省依次读 SCHOLAR_EMAIL、config.json")
         sp.add_argument("--proxy", help="显式代理，如 http://127.0.0.1:7890（默认直连，不用代理）")
         sp.add_argument("--no-proxy", action="store_true", help="强制直连（默认即直连，保留兼容）")
         sp.add_argument(
@@ -1077,8 +1158,10 @@ def main():
     s.add_argument("--out", required=True, help="输出 Markdown 路径")
     s.add_argument("--title", default="待下载清单")
 
+    sub.add_parser("config", help="打印各项配置的实际来源（诊断用，不改任何文件）")
+
     a = p.parse_args()
-    email = getattr(a, "email", None) or os.environ.get("SCHOLAR_EMAIL") or None
+    email, email_src = resolve_email(getattr(a, "email", None))
     # 默认直连；显式 --proxy 用代理；--auto-proxy 先直连、网络层失败再降级环境代理
     if getattr(a, "proxy", None):
         set_proxy(a.proxy)
@@ -1086,6 +1169,9 @@ def main():
         set_proxy("", auto=True)
     else:
         set_proxy("")  # 默认直连（含 --no-proxy）
+
+    if a.cmd == "config":
+        return jout(build_config_report(email, email_src, a), 0)
 
     if a.cmd == "search":
         res = search_works(a.query, a.from_year, a.limit, email, a.sort, a.field)

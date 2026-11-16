@@ -2,6 +2,18 @@
 
 > 只在需要判断"手上这份是不是最新"或对照朋友那份版本时读。版本语义：major = 行为模式重写；minor = 新增通道/结构调整；patch = 修正与措辞。
 
+## 3.2.0（2026-11-16）配置分层：技能目录与个人数据彻底分离
+
+**动机**：原先个人定制文件（`triage.local.md`、`cn_journal_map.local.json`）放在技能目录里，用 zip 覆盖升级或 `git pull` 时会一并丢失。
+
+- 新增 `scripts/_config.py`（内部模块）：统一实现 **项目级 `<workspace>/.scholar-browser/` > 用户级 `~/.scholar-browser/` > 内置模板** 的查找；自动跳过技能目录自身（技能也是 git 仓库，否则会把自己的 `.git` 误判成项目根）；项目级与用户级重合时视为无项目级。
+- 新增 `oa_fetch.py config` 诊断命令：打印每项配置的实际路径与来源、期刊映射合并条数、邮箱来源（脱敏）、代理模式。
+- `fetch_cn_journal.py`：映射改为分层加载（`cn_journal_map.json`），支持 `{doi}` / `{tail}` 两种占位符；旧位置 `scripts/cn_journal_map.local.json` 仍识别但提示迁移。
+- 邮箱来源扩展：`--email` > `SCHOLAR_EMAIL` > `config.json`（允许把常用邮箱写进用户级配置）。
+- 文档同步：`README` 新增「配置放哪」；`ROUTER` 维护约定改为「技能目录不放任何个人配置」；`triage.md` 明确标注为内置模板；`platforms-cn-journal.md` 的扩展映射改指用户级路径。
+
+**升级提示**：旧版本把配置放在技能目录里的用户，把 `references/triage.local.md` 移到 `~/.scholar-browser/triage.md`、`scripts/cn_journal_map.local.json` 移到 `~/.scholar-browser/cn_journal_map.json`。旧位置仍能跑，但升级会覆盖。
+
 ## 3.1.1（2026-11-16）个性信息再收敛 + 脚本可扩展，**无行为变更**
 
 - 中文期刊官网 SOP 重写：删掉指向性强的一批刊名与整节站点专项，只保留 **5 本通用刊**（力学/物理/工程类）作示例。
