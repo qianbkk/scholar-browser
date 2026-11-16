@@ -48,9 +48,9 @@ python "$S" plan --baseline "$D/baseline.json" --current "$D/current.json" \
 
 ### 代理四条注意
 
-1. 走代理访问公开 OA 资源 = 正常联网，**不属于"绕过"**（见 `limits.md` §1.1）。
-2. **不得轮换代理 IP 规避平台限速或封禁**——那是红线，不是配置问题。
+1. 走代理访问公开 OA 资源 = 正常联网（见 `limits.md` §1.1）。
+2. 出口**保持稳定**：不频繁切换节点，不并发；请求节奏按平台公开的限速来。
 3. 代理若做 TLS 中间人，会出现 `SSLCertVerificationError` → 让用户换 HTTP 代理或关闭证书替换；**不要自己关证书校验**。
-4. ★ **代理会摧毁机构授权（本机实测）**：开代理后出口 IP 变成境外节点（本例 Japan/G-Core），ScienceDirect 直接弹「Are you a robot?」并记录该境外 IP，机构订阅失效 + 触发反爬。
+4. ★ **代理会摧毁机构授权（本机实测）**：开代理后出口 IP 变成境外节点（本例 Japan/G-Core），ScienceDirect 直接弹「Are you a robot?」并记录该境外 IP，机构识别随之失效。
    → **分区策略**：公开资源（GS / PubMed / arXiv / OpenAlex）走代理；**机构订阅库（Elsevier / Springer / Wiley / 知网 / 万方）必须直连**。
    → 真下不了时，正确动作是**请用户关代理或给订阅域名加 DIRECT 规则**（具体做法见 `limits.md` §1.1 的 `ProxyOverride` 片段），不是换节点重试。

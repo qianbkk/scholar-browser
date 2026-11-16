@@ -117,7 +117,7 @@ S10 立刻核验下载目录出现新文件、无 .crdownload；再交给 litado
 | `DOM node_id is stale`（下载点击后常见） | 重新读 DOM |
 | `provider invocation timed out` | 同一操作最多重试一次 |
 | `tabs_finalize` 超时 | 不影响页面与交付，记录即可 |
-| CAPTCHA / 403 / 异常流量 | 停止队列，标记需人工 |
+| 人机校验页 / 403 / 异常流量 | 停止队列，标记需人工 |
 
 ## 待实测（不要写成确定事实）
 

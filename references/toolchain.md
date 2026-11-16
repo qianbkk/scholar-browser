@@ -33,7 +33,7 @@
 `browsers_list` 只剩 `WorkBuddy Browser`（type=desktop）、没有 `type=extension` 的条目，说明 **Edge 扩展的 service worker 休眠了，native messaging 通道没接上**。
 - **恢复办法**：请用户在 Edge 工具栏点一下 WorkBuddy 扩展图标（Agent 点不到浏览器 UI），随后 `browsers_list` 会重新出现 `browser_id=2`（extension 0.2.8，ID `ndbfelmlimfjklodckmbalfioaehegpc`）。
 - **重启 Edge 前先想清楚**：任何 `taskkill msedge` + 重启，都会打断这条通道，必须让用户点一次才能恢复。不要以为重启就自动好了。
-- **不要退回内置浏览器**：内置 `WorkBuddy Browser` 的 UA 是 `WorkBuddy/5.9.3 Chrome/138 Electron`，Cloudflare 一眼识别（实测直接弹 reCAPTCHA，即使出口 IP 是正确的国内直连 IP 也没用）。**机构权限 + 反爬对抗只能靠真实 Edge**。
+- **不要退回内置浏览器**：内置 `WorkBuddy Browser` 的 UA 是 `WorkBuddy/5.9.3 Chrome/138 Electron`，站点直接识别（实测直接返回校验页，即使出口 IP 是正确的国内直连 IP 也没用）。**机构权限与站点校验只能靠真实 Edge**。
 
 ## 2. DOM 与截图：两条腿走路（2026-11-13 修正）
 
@@ -103,9 +103,9 @@
 | `DOM node_id is stale` | 重新 `dom_cua_get_visible_dom`，不用旧标识 |
 | `stale_tab` / `browser_not_found` / `extension_disconnected` / `host_restarted` | 从 `browsers_list` 重新开始，不复用标识 |
 | 登录失效 / 跳登录页 | 停机，标记「需人工」，请用户在真实浏览器重新登录或重走 CARSI |
-| CAPTCHA / unusual traffic / 403 / 429 | 停止当前队列，不重放、不换 IP、不绕过 |
+| 人机校验页 / 异常流量提示 / 403 / 429 | 停止当前队列，不重放、不换出口、不刷新硬闯 |
 | 「正在检查浏览器」/ JS challenge 中间页 | 停机标 `blocked`，不点手动重定向、不重放（`limits.md` §2）。注意此时 `tab_url` 可能已变，别误判成功 |
-| 站点整站不可达（如 `ERR_CONNECTION_TIMED_OUT`） | 记 `timeout`，**不要记 `blocked`**（blocked 留给风控/权限）。**先确认是否需代理**：配了代理就用 `--proxy`/环境变量重试一次——实测 GS 与 PubMed 都是"直连失败、代理后正常" |
+| 站点整站不可达（如 `ERR_CONNECTION_TIMED_OUT`） | 记 `timeout`，**不要记 `blocked`**（blocked 留给校验/权限）。**先确认是否需代理**：配了代理就用 `--proxy`/环境变量重试一次——实测 GS 与 PubMed 都是"直连失败、代理后正常" |
 | Cookie 横幅 / 机构选择 / 浮层遮挡 | 按 `limits.md` 判断可否关闭；**要求"必须与横幅交互才能关闭"的站点不要替用户点同意**，按结构性 blocker 交人工 |
 | 点了下载但目录无新文件 | 先查平台 `download` 段：可能是 `viewer+保存` 需第二步、或新窗口、或二次确认；再查 `.crdownload` |
 | 只出现 `.crdownload` / `.part` | 下载未完成，等待或标失败，**不要改后缀当作完成** |

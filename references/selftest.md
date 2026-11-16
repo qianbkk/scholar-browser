@@ -28,7 +28,7 @@ python "<skill_dir>/scripts/oa_fetch.py" check  --file "<tmp>/<name>.pdf"
 | # | DOI | 预期 |
 |---|---|---|
 | L2-1 | `10.48550/arXiv.1706.03762` | 成功（arXiv 仓储 PDF，~2.2 MB） |
-| L2-2 | `10.7717/peerj.4375` | gold OA 但可能失败（PMC 返 HTML / Cloudflare 403） |
+| L2-2 | `10.7717/peerj.4375` | gold OA 但可能失败（PMC 返 HTML / 站点 403） |
 | L2-3 | `10.1038/nature14539` | 失败（订阅刊，`html_landing` 链路） |
 
 记录：`candidates` 数量、`chosen.via`、`verify.magic`、`attempts[].reason`、耗时。
@@ -86,7 +86,7 @@ S8 tabs_finalize（超时不判失败）
 | 指标 | 定义 |
 |---|---|
 | `steps.total` | 工具调用总数（含开场 4 步），分 `opening/navigate/dom_snapshots/status_reads/clicks/screenshots/finalize`；单平台上限 25 |
-| `errors[]` | 失败与重试；区分链路抖动（超时）vs 页面拒绝（403/CAPTCHA） |
+| `errors[]` | 失败与重试；区分链路抖动（超时）vs 页面拒绝（403/校验页） |
 | `screenshot_fallback` | 0/1：是否因 DOM 读不到摘要而必须截图 |
 | `dom_sufficiency` | `sufficient`（题名+作者+来源+年份+摘要前 100 字全可读）/ `partial` / `insufficient` |
 | `login_valid` | `valid`（机构名可见/无锁/可下载态）/ `invalid` / `unknown` |
@@ -129,8 +129,8 @@ S8 tabs_finalize（超时不判失败）
 
 1. **不并发**：串行，一次一平台一标签页，平台间留自然间隔。
 2. **不批量**：不勾选多篇、不走批量下载/导出、不循环脚本化点击、API 侧不并发不刷限速。
-3. **不绕过登录**：不代登录、不读/回显 Cookie、不伪造 UA、不换 IP、不接打码、不构造内部接口。
-4. **遇阻即停**：`captcha`/`unusual traffic`/`403`/`429`/跳登录页/JS 校验页 → 该平台 `status=blocked`，停队列不重放。同一动作最多重试一次。
+3. **登录由用户完成**：不代登录、不读/不回显登录凭据、请求按工具自身标识发出、只调用公开接口。
+4. **遇阻即停**：`captcha`（要求人机校验）/ 异常流量提示 / `403` / `429` / 跳登录页 / JS 校验页 → 该平台 `status=blocked`，停队列不重放。同一动作最多重试一次。
 5. **收尾要清场**：只在自己新建的标签页操作；**结束后用 `tabs_close` 把自己开的所有页关掉**（除非用户明确要求留着看）。`tabs_finalize` 只用于保留交付页。**用户原有标签页一律不关**。`tabs_close` 报超时是假失败，用 `user_open_tabs` 复核即可（`limits.md` §1.8）。
 6. **不产生文献文件**：平台验证段全程禁止点击下载/导出/PDF 保存；不跑 `litadopt` 任何命令。
    **例外**：L2 段（§1.1）允许真实下载，但**只能下到临时目录**，且必须验证"失败时无残留"。

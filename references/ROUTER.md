@@ -52,7 +52,7 @@
 | 订阅型 PDF 能不能自动落盘 / SD 批量下载 | `sd-batch.md` | `limits.md` §5 |
 | 判断这份技能是不是最新 | `CHANGELOG.md` | — |
 | 跑了下载但目录没文件 | 对应平台 `download` 段 | `toolchain.md` §4 |
-| 登录态信号 / CAPTCHA / 403 / 429 | `limits.md` §2 | — |
+| 登录态信号 / 人机校验 / 403 / 429 | `limits.md` §2 | — |
 | 要验证某平台 SOP | `selftest.md` | 对应平台文件 |
 | **要派子代理干检索/下载/归集** | `executor-brief.md` | 对应平台文件 |
 | `--move-sources` / 回滚 | `toolchain.md` §5 | — |

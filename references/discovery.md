@@ -7,7 +7,7 @@
 
 ## 0. 为什么不是"全都用浏览器"
 
-用登录态浏览器逐页操作，一篇约 6–10 次动作，慢、易被风控、DOM 结构一变就失效。
+用已登录浏览器逐页操作，一篇约 6–10 次动作，慢、易被站点限流、DOM 结构一变就失效。
 但反过来"全靠 API/直链"也做不到：OA 理论上限约 28%–50%，而**端到端直链成功率明显更低**。
 
 本机 3 个真实 DOI 实测（2026-11-13）:
@@ -15,16 +15,16 @@
 | DOI | OpenAlex OA 状态 | 结果 | 失败原因 |
 |---|---|---|---|
 | `10.48550/arXiv.1706.03762` | 仓储版 | **成功** 2.21 MB，`%PDF-1.5`，1 次候选命中 | — |
-| `10.7717/peerj.4375` | gold | 失败 | PMC `/pdf/` 返回 HTML；doi.org→peerj 被 Cloudflare 403 |
+| `10.7717/peerj.4375` | gold | 失败 | PMC `/pdf/` 返回 HTML；doi.org→peerj 被站点 403 |
 | `10.1038/nature14539` | green | 失败 | `citation_pdf_url` 指向文章页；OA url 连接失败 |
 
 **结论：3 个里 1 个能直取（33%），与第三方 123-DOI 实测 33%/39% 同量级【联·二手】。**
 
 **开代理后复测（2026-11-13，`--proxy http://127.0.0.1:<用户端口>`）：结果没变，仍是 1/3。**
-- PeerJ：PMC 路径从 `html_landing` 变成 **`captcha`**，doi.org→peerj 仍是 `cloudflare_challenge`
+- PeerJ：PMC 路径从 `html_landing` 变成 **`captcha`**（要求人机校验），doi.org→peerj 仍记为 `cloudflare_challenge`
 - Nature：仍是 `html_landing`，另一条 OA 位置报 `SSLCertVerificationError`（代理做了 TLS 中间人）
 
-→ **失败原因是站点反自动化（验证码 / Cloudflare / TLS 指纹），不是网络不可达。代理能救"打不开的站"，救不了"不让你程序下载的站"。** 所以看到 L2 失败别以为是网络问题去反复重试。
+→ **失败原因是站点针对自动化请求做了拦截（校验页 / 会话特征 / TLS 指纹），不是网络不可达。代理能救"打不开的站"，救不了"不认程序请求的站"。** 所以看到 L2 失败别以为是网络问题去反复重试。
 
 所以正确结构是三层，不是二选一：能直取就直取，直取失败**带着失败原因**回浏览器。
 
@@ -57,12 +57,12 @@
 1. **幻觉题名**：AI/摘要生成的引用常有作者、卷期、页码错误 → 拿到候选必须用 Crossref 核一遍。
 2. **DOI 错配**：某源查无 ≠ 不存在（只是该源没收录）→ 换源再查，别急着否定。
 3. **版本混淆**：preprint / accepted manuscript / 正式版（VoR）三回事，年份可能差一年 → 下载后看首页版本标识，报给用户。
-4. **付费墙伪装成 OA**：`citation_pdf_url` 可能指向文章页而不是 PDF（Nature 实测就是），必须过闸门。
+4. **订阅页被标成 OA**：`citation_pdf_url` 可能指向文章页而不是 PDF（Nature 实测就是），必须过闸门。
 
 ### 2.3 Google Scholar 的边界（重要）
 
 - **无官方 API**，robots 明确禁抓 `/scholar`、`/search`，ToS 要求自动化须获书面许可【联】。
-- 自动化抓取 = 速率监控 + CAPTCHA + IP 封禁，且**无版本化变更通知**，页面结构随时变【联】。
+- 自动化批量取数 = 速率监控 + 校验页 + 出口封禁，且**无版本化变更通知**，页面结构随时变【联】。
 - → 本 Skill **不把 GS 作为自动化数据源**。可做的是：用户在浏览器里自己看，或极低频人工核对一两屏。
 - GS 唯一不可替代的价值是"灰色文献/中文/学位论文收录更全"，遇到开放渠道查不到的中文文献时，可让用户手动搜一次。
 
@@ -152,7 +152,7 @@ python "<skill_dir>/scripts/oa_fetch.py" check --file "<path>"
 | `ok` | 通过 | 完成，记录 `via` |
 | `html_landing` | 返回的是网页 | 下一个候选；耗尽 → L3 |
 | `cloudflare_challenge` | JS 挑战（"Just a moment"） | **直接 L3**，不要重试 |
-| `captcha` | 人机验证 | 停，交人工 |
+| `captcha` | 要求人机校验 | 停，交人工 |
 | `login_wall` | 登录页 | L3（用户登录态可解） |
 | `paywall_landing` | 订阅页 | L3（机构权限可解）或转正规渠道 |
 | `forbidden_403` / `rate_limited_429` | 拒绝/限流 | 429 退避一次；持续 → L3 |
@@ -173,8 +173,8 @@ python "<skill_dir>/scripts/oa_fetch.py" check --file "<path>"
 | 观测信号 | 判定 | 动作 |
 |---|---|---|
 | 域名 ∈ 知网 / 万方 / 维普 / 读秀 | 中文订阅库，直连无意义 | **不做 L2，直接 L3** |
-| `is_oa=false` 且无任何 OA 副本 | 付费墙 | L3 |
-| L2 返回 `cloudflare_challenge` / `captcha` | 需真实浏览器 | L3（captcha 还需人工）。**注意：JS 挑战在真实浏览器里常能自动通过，所以回 L3 不等于失败** |
+| `is_oa=false` 且无任何 OA 副本 | 需订阅 | L3 |
+| L2 返回 `cloudflare_challenge` / `captcha` | 需真实浏览器 | L3（`captcha` 还需人工过一次）。**注意：JS 校验在真实浏览器里常会自动通过，所以回 L3 不等于失败** |
 | L2 返回 `login_wall` / `need_auth` | 需会话 | L3 |
 | PDF 只在 viewer 内、需点保存 | 需交互 | L3（ScienceDirect 典型） |
 | 候选耗尽且全为 `html_landing` | 无直链 | L3 |

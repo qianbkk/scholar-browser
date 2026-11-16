@@ -4,7 +4,7 @@
 
 零依赖，仅用 Python 标准库。设计原则来自实测与调研：
 - 不信任文件后缀，只信任 status + Content-Type + 文件头 %PDF 魔数 + 尾部闭合。
-- 串行、限速、可缓存；不并发、不轮换 IP、不伪造浏览器 UA。
+- 串行、限速、可缓存；请求按工具自身标识发出，不做浏览器伪装。
 - 失败要给出**可编码的原因**（login_wall / cloudflare / captcha / paywall / html_landing ...），
   供上层决定是否回退到登录态浏览器（L3）。
 

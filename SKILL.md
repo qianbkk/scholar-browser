@@ -2,15 +2,15 @@
 name: scholar-browser
 slug: scholar-browser
 displayName: 学术文献获取
-summary: 宽泛发现 + OA 直取 + 真实浏览器登录态兜底，检索与下载学术文献并自动归集到工作区
+summary: 宽泛发现 + 开放获取直取 + 浏览器协作，检索学术文献并自动归集到工作区
 license: MIT
 agent_created: true
 display_name: 学术文献获取
 display_name_en: Scholar Literature Fetcher
-description: 学术文献检索与获取工作流，三级路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试 OA 直取 PDF（魔数闸门校验），失败才用用户真实浏览器登录态（Edge/Chrome 扩展）在知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect 上逐页操作获取全文；下载文件自动校验、去重、规范命名后归集到工作区。触发词：查文献、检索文献、搜论文、找文献、下载论文、下载文献、能不能下、OA 全文、高级检索、检索式、知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、机构登录态、复用浏览器登录、文献归集、下载目录不留。**不适用于**通用网页抓取、表单填写、站点测试、商品或社媒数据采集（那类需求改用通用浏览器技能）。
-description_zh: 宽泛发现 + OA 直取 + 真实浏览器登录态兜底，检索与下载学术文献并自动归集到工作区。
-description_en: Three-tier literature workflow - broad discovery, open-access direct fetch with magic-byte validation, then signed-in browser fallback across CNKI, Wanfang, VIP, WoS, PubMed, arXiv and ScienceDirect; auto-adopts downloads into the workspace. Not for general web scraping, form filling, site QA, or product/social scraping.
-version: 3.2.2
+description: 学术文献检索与获取工作流，三级路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试开放获取直取 PDF（魔数闸门校验），未成功则在用户自己的浏览器（Edge/Chrome 扩展）中按平台流程逐页操作，覆盖知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect；文件自动校验、去重、规范命名后归集到工作区。触发词：查文献、检索文献、搜论文、找文献、下载论文、下载文献、能不能下、OA 全文、高级检索、检索式、知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、已登录浏览器、浏览器取全文、文献归集、下载目录不留。**不适用于**通用网页抓取、表单填写、站点测试、商品或社媒数据采集（那类需求改用通用浏览器技能）。
+description_zh: 宽泛发现 + 开放获取直取 + 浏览器协作，检索学术文献并自动归集到工作区。
+description_en: Three-tier literature workflow - broad discovery, open-access direct fetch with magic-byte validation, then browser-assisted retrieval in the user's own session across CNKI, Wanfang, VIP, WoS, PubMed, arXiv and ScienceDirect; auto-adopts downloads into the workspace. Not for general web scraping, form filling, site QA, or product/social scraping.
+version: 3.3.0
 ---
 
 # 学术文献获取工作流（三级路由）
@@ -28,13 +28,13 @@ Python 用 PATH 上的 `python`（3.9+ 即可，仅标准库，无第三方依�
 | **L1 宽泛发现** | 主题 → 题名 + DOI/PMID/arXiv ID | `oa_fetch.py search` / `cite` 引文滚雪球 + 开放 API + WebSearch + 中文站内检索 | 一开始，永远先做 |
 | **L1.5 中文期刊官网** | DOI → 官网真 PDF（**比知网好**） | `scripts/fetch_cn_journal.py` | 中文期刊 DOI 到手就试，早于 L3 |
 | **L2 直接获取** | 标识符 → 过闸门的 PDF | `scripts/oa_fetch.py` | 拿到 DOI 立刻试 |
-| **L3 登录态兜底** | 需机构权限/交互的全文 | `mcp__browser__*` + 平台 SOP | L2 失败且原因指向"需浏览器" |
+| **L3 浏览器协作** | 需登录或需交互的全文 | `mcp__browser__*` + 平台 SOP | L2 失败且原因指向"需浏览器" |
 
 **判定顺序（不要颠倒）**
 
 1. 已知 DOI/PMID/arXiv ID → 直接 L2。
 2. 只有主题 → L1 拿标识符 → L2。
-3. L2 失败 → 看 `reason` 码：`cloudflare_challenge`/`login_wall`/`paywall_landing`/`captcha` → L3；`html_landing`/`not_found` → 换候选再试，耗尽才 L3。
+3. L2 失败 → 看 `reason` 码：需要交互的（登录墙、站点校验页、订阅确认页）→ L3；页面可解析但没给 PDF（`html_landing`/`not_found`）→ 换候选再试，耗尽才 L3。
 4. 目标平台是**知网/万方/维普** → **跳过 L2**，直接 L3（中文订阅库直连无意义）。
 5. **中文文献（有 DOI）→ 先 L1.5 官网直取，再万方，最后知网**：官网和万方都给**真 PDF**；知网多给 KDH/CAJ，需阅读器。
 6. 中文文献 → L1 必须走中文站内检索，开放 API 对中文覆盖弱。
@@ -58,7 +58,7 @@ Python 用 PATH 上的 `python`（3.9+ 即可，仅标准库，无第三方依�
 | 万方 | **中文全文首选**（L3） | 检索 ✓ 题录 ✓ **全文 ✓**（12 篇，**给真 PDF**） |
 | 中文期刊官网 | 中文真 PDF（L1.5） | 12 篇实测（力学 / 工程类中文刊） |
 | 维普 | **当前不可自动化** | 检索 ✗（DOM/CUA 持续超时） |
-| Google Scholar | 灰色文献/中文补充（**需代理**） | 检索 ✓；提交须点按钮，Enter 无效 |
+| Google Scholar | 灰色文献/中文补充（**视网络环境**） | 检索 ✓；提交须点按钮，Enter 无效 |
 | Web of Science | 引文发现（L1），非宿主 | 检索 ✗（输入写不进、截图空白） |
 | PubMed / PMC | 题录发现（L1），全文交 L2 | 检索 ✓；列表页无摘要，`Free PMC` 可见 |
 | arXiv | 预印本（**L2 优先**） | 检索 ✓ **全文 ✓**（L2 实测 2.2 MB） |
@@ -70,12 +70,12 @@ Python 用 PATH 上的 `python`（3.9+ 即可，仅标准库，无第三方依�
 
 ## 3. 红线（完整版见 `references/limits.md`）
 
-1. **不碰凭据**：不读/不导出/不回显 Cookie、口令、令牌；登录只能用户自己做。
-2. **不绕过**：不破 CAPTCHA、403、付费墙、机构认证、Cloudflare；不换 IP、不伪造 UA、不接打码。
-3. **不批量**：逐篇检索、逐篇点击、串行、留间隔；API 侧串行 + 限速 + 缓存。
-4. **遇阻停机**：验证码 / unusual traffic / 403 / 429 / 跳登录页 → 停队列标「需人工」，同一动作最多重试一次。
+1. **凭据归用户**：登录只在用户自己的浏览器里完成；不读取、不保存、不回显任何登录凭据。
+2. **尊重访问限制**：只获取公开可用的，或用户本人有权访问的内容；遇登录墙、校验页、订阅确认页即停止当前条目，转正规渠道（校园网 / 图书馆文献传递 / OA 版本 / 向作者索取）。
+3. **人工节奏**：逐篇检索、逐篇点击、串行、留间隔；API 侧串行 + 限速 + 缓存。
+4. **遇阻停机**：访问受限、限流、跳登录页 → 停队列标「需人工」，同一动作最多重试一次。
 5. **不误伤文件、不编造**：只处理本轮基线后新增 + 白名单 + 魔数通过的文件；没实测的文案/字段/URL 一律标「待实测」。
-6. **浏览器需授权才启动**：默认不主动开 GUI 浏览器；用户说「启动我的浏览器 / 用浏览器下载 / 可以启动」时才 `Start-Process msedge <url>`。启动 ≠ 绕过；**不 taskkill、不反复重启**。
+6. **浏览器需授权才启动**：默认不主动开 GUI 浏览器；用户说「启动我的浏览器 / 用浏览器下载 / 可以启动」时才启动。启动不改变前 5 条；**不 taskkill、不反复重启**。
 
 ## 4. 流水线
 
@@ -132,10 +132,10 @@ python "<skill_dir>/scripts/litadopt.py" adopt --plan <plan> --workspace "<works
 python "<skill_dir>/scripts/litadopt.py" verify --workspace "<workspace>"
 python "<skill_dir>/scripts/litadopt.py" report --workspace "<workspace>" --format table
 python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>"            # 只看隔离区占用
-python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confirm  # 真删（不可逆）
+python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confirm  # 清理隔离区（需二次确认）
 ```
 
-`--move-sources`：把本次新增文献移到隔离区（可逆、有日志、可 `rollback`），**仅当用户明确说过「默认下载目录不留」**；否则先 `--dry-run` 出清单请确认。彻底删除隔离区本 Skill 不做。
+`--move-sources`：把本次新增文献移到隔离区（可逆、有日志、可 `rollback`），**仅当用户明确说过「默认下载目录不留」**；否则先 `--dry-run` 出清单请确认。隔离区的清理一律等用户另行确认。
 
 **下载目录不硬编码**：`litadopt.py` 按「组策略 → Edge/Chrome `Preferences` → 注册表 `User Shell Folders` → 兜底」解析，换机器自动适配。**接受标准是"文件名 + 大小 + mtime"基线快照**。
 
@@ -154,7 +154,7 @@ python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confi
 | 操作万方 / 维普 | `platforms-cn.md` |
 | 操作 WoS / PubMed / arXiv / ScienceDirect / GS | `platforms-global.md` |
 | **订阅型 PDF 能不能自动落盘 / SD 批量 ZIP** | `sd-batch.md` |
-| **要开浏览器：标签页基线 / 代理 / 邮箱** | `runtime.md` |
+| **要开浏览器：标签页基线 / 网络出口 / 邮箱** | `runtime.md` |
 | **判断某篇值不值得读/存（A/B/C/D 分级）** | 分级标准按序生效：`<项目>/.scholar-browser/triage.md` > `~/.scholar-browser/triage.md` > 内置 `triage.md`（模板） |
 | **配置在哪、为什么这次行为和上次不同** | `oa_fetch.py config`（打印每项配置的实际路径与来源） |
 | **要派子代理去执行检索/下载/归集** | `executor-brief.md` |
@@ -169,7 +169,7 @@ python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confi
 | 情况 | 交付内容 |
 |---|---|
 | **拿到 PDF** | 文件落盘 + 校验通过 + 记录（含 OA 状态、版本、来源、`via`） |
-| **没拿到全文** | 题名、作者、来源、年份、DOI/PMID/arXiv ID、**摘要（有多少给多少）**、**至少一个可打开链接**、以及**为什么没拿到**（付费墙 / 验证码 / 需机构 / 找不到） |
+| **没拿到全文** | 题名、作者、来源、年份、DOI/PMID/arXiv ID、**摘要（有多少给多少）**、**至少一个可打开链接**、以及**为什么没拿到**（需订阅 / 需校验 / 需机构 / 找不到） |
 
 **摘要优先级**：① 出版商官方 RIS 导出（最全最准，SD 实测 25/25 有摘要）→ `ris_meta.py`；② Crossref / OpenAlex / PubMed efetch（`meta` 自动依次试）；③ Semantic Scholar（无 key 常 429，退避一次即跳过，不要刷）；④ 全无 → 如实写「该库未提供摘要」+ DOI + GS 链接，**不编造**。
 
@@ -183,7 +183,7 @@ python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confi
 - 无 CAJViewer / caj2pdf → 真 CAJ 转不了；知网可能给 **KDH**，需官方阅读器。`pypdf` / `PyMuPDF` 已装，但脚本只用魔数。
 - `mcp__browser__*` 无下载管理、无本地文件读取 → 下载靠点击触发落盘，文件侧全交脚本。
 - 完全 OA 站点也可能因 TLS 指纹被拒（MDPI/PLOS/PMC 有报告）→ L2 固有上限，不是 bug。
-- Edge 扩展偶发超时（claim/DOM/点击/finalize）：同操作最多重试一次，**不 taskkill、不反复重启**；`No current window` 且用户已授权时 `Start-Process msedge <url>`，仍失败请用户点一次扩展图标。
+- Edge 扩展偶发超时（claim/DOM/点击/finalize）：同操作最多重试一次，**不 taskkill、不反复重启**；`No current window` 且用户已授权时打开新窗口，仍失败请用户点一次扩展图标。
 - 只对 §2 列出的平台负责；其余平台不声称验证过。
 
 版本与变更历史见 `references/CHANGELOG.md`。

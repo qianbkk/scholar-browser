@@ -9,7 +9,7 @@
 |---|---|---|
 | 单篇 `View PDF` | **不能** | 进 Edge 内置阅读器，存盘要过系统「另存为」对话框，Agent 碰不到 |
 | 多选 ≥2 篇 → `Download N articles` | **能（SD 实测）** | 服务端打包，ZIP 直接落下载目录，无对话框 |
-| 单篇的 `pdfft` 直链 curl | 不能 | 即使带签名、无 cookie，仍被 Cloudflare 拦（`Security verification`） |
+| 单篇的 `pdfft` 直链 curl | 不能 | 即使带签名、无 cookie，仍被站点拦（`Security verification`） |
 
 **三条可自动写盘的路径**只有：OA 直取（L2）、知网下载（L3）、SD 批量 ZIP（L3）。
 
@@ -39,4 +39,4 @@
 
 Springer / Wiley / SAGE 等单篇仍进阅读器 → 走 `oa_fetch.py checklist` 生成可点击清单，交用户手动另存；存完由 `litadopt.py` 归集改名。
 
-**不要**为"下全"反复试探同站；**也不要**尝试无头浏览器硬闯 Cloudflare（`limits.md` §5 记录了 8 条失败方案，别重走）。
+**不要**为"下全"反复试探同站；**也不要**改用无头浏览器反复试（`limits.md` §5 记录了 8 条失败方案，别重走）。

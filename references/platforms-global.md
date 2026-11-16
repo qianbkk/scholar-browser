@@ -25,7 +25,7 @@
 | detail | `arXiv:{id}` 锚点点击**同标签页**跳转（`same_tab`）；`/abs` 页摘要**静态 → 必须截图**；DOI 在详情页可读（`https://doi.org/10.48550/arXiv.{id}`）【实测】 |
 | download | **`View PDF` 只出现在 `/abs` 详情页右侧 `Access Paper:` 侧栏**（DOM 可读，href=`/pdf/{id}`）；**结果页没有 View PDF**。有 ID 时**直接取这条 href 走 L2 `fetch --url`**，不必进详情页【实测】 |
 | 语法 | `ti:` `au:` `abs:` `co:` `jr:` `cat:` `rn:` `id:` `all:`；`AND/OR/ANDNOT`；`""` 短语；`?` 单字符、`*` 任意（不能在首位）【联】 |
-| 限速 | 官方 API TOU：每 3 秒 1 次、单连接；持续超额 429；禁规避/轮换 IP【联】 |
+| 限速 | 官方 API TOU：每 3 秒 1 次、单连接；持续超额 429；要求固定出口、单线程【联】 |
 | 备注 | `10.48550/arXiv.{id}` 是 DataCite DOI，指向**预印本**，不是期刊正式版；引用要区分 |
 
 **待实测**：`View PDF` 点击后是浏览器内渲染还是落盘（红线未点）；`select[name=searchtype]=Title` 与 `query` 里写 `ti:` 是否等价。
@@ -61,7 +61,7 @@
 | ⚠ autosuggest | `qs` 框有联想，联想项以 `<li role="option">` **进入 DOM 快照** → 提交前**不要误点联想项**（否则会直接跳到某篇文章）【实测】 |
 | submit | `cua_execute` 坐标 click+type 一次写入 → 点 Search → URL 变 `/search?qs=...`【实测】 |
 | auth | 机构订阅 IP / Shibboleth / 个人账号；**机构名 DOM 可读**（`button aria-label="<学校> Institutional Access"`）【实测】 |
-| ⚠ **代理致命** | **必须走机构 IP 直连**。本机实测：开代理后 `doi.org` → `sciencedirect.com` 直接弹「Are you a robot? Please confirm you are a human…」，挑战页 `IP Address` 记录的正是**代理出口**（境外云节点），而直连出口是国内教育网/运营商 IP。→ **机构 IP 授权失效 + 触发反爬，双重失败**。处置：先让用户关代理或给 `sciencedirect.com`/`elsevier.com`/`doi.org` 设 DIRECT 规则，再重试；**不要换节点重试**（换节点＝换了个更可疑的 IP）【实测】 |
+| ⚠ **代理致命** | **必须走机构 IP 直连**。本机实测：开代理后 `doi.org` → `sciencedirect.com` 直接进站点校验页，校验页的 `IP Address` 记录的正是**代理出口**（境外云节点），而直连出口是国内教育网/运营商 IP。→ **机构识别失效 + 站点校验，双重失败**。处置：先让用户关代理或给 `sciencedirect.com`/`elsevier.com`/`doi.org` 设直连例外，再重试；**不要换节点重试**（换节点只是换了个更可疑的出口）【实测】 |
 | 机构入口 | 若直连后仍显示 `Get Access`：找 `Access through your institution` / `Choose Organization` → 选机构 → 走机构登录（CARSI/Shibboleth）。**这一步必须用户本人输账号**，Agent 只负责把页面导航到那里 |
 | results | **题名 DOM 可读**（`a[href="/science/article/pii/{PII}"]`）、**期刊名可读**（`/science/journal/{id}`）、**`View PDF` 可读**；结果数「105 results」、作者名、出版日期、`Full text access` 徽标**只能截图**【实测】 |
 | detail_entry | **点题名有效，同标签页跳转**（`same_tab`）【实测】 |
@@ -77,7 +77,7 @@
 | download(单篇) | `View PDF` 的 href 就是 PDF 端点：结果页 `/science/article/pii/{PII}/pdfft?pid=1-s2.0-{PII}-main.pdf`；详情页版带 `md5`。**但点开只会进 reader**（Edge 157 下 `always_open_pdf_externally` 开关无效），存盘必须走系统「另存为」→ Agent 做不到。故单篇目标要**连带一篇相邻文献一起勾选**凑成 ZIP【实测】 |
 | 限额 | 官方防滥用：搜索结果页 100 篇/天、期刊期号页 250 篇/天（按每天下载 PDF 总数计）【联】 |
 | blockers | 全选勾选框**只在「一个都没选中」时点一次有效**（部分选中状态下连点 5 次都不变）→ 刷新回空状态再点，**不需要用户手动介入**；`Choose Organization`、推荐文献预勾选弹窗、LeapSpace 浮层遮挡；列表按 `Full text access` 过滤，无权限条目下不来 |
-| 25 篇全选实测 | **成功**：一次全选 25 篇 → 服务端打包约 80 秒 → 403 MB ZIP，**未触发风控/限额**；ZIP 内**不含**无权限条目（自动剔除 1 篇）→ 见上面「权限过滤」行【实测·2026-11-13】 |
+| 25 篇全选实测 | **成功**：一次全选 25 篇 → 服务端打包约 80 秒 → 403 MB ZIP，**未触发限流**；ZIP 内**不含**无权限条目（自动剔除 1 篇）→ 见上面「权限过滤」行【实测·2026-11-13】 |
 
 **待实测**：`Get Access` 分支（本轮机构订阅有效，未触发）。
 
@@ -105,12 +105,12 @@
 |---|---|
 | entry | `https://scholar.google.com` |
 | ⚠ 网络 | **直连可能不可达**（本机实测 `ERR_CONNECTION_TIMED_OUT`）；**开代理后正常**（2026-11-13 复测：无验证码，检索约 630 条结果，首屏有 `[PDF]` 与 `Cited by`）【实测】 |
-| 失败分类 | 网络不可达 → 记 `timeout`，**先提示用户检查代理/网络**；风控拦截（captcha / unusual traffic）→ 记 `blocked`，提示人工核对。**两者处置不同，不要混** |
+| 失败分类 | 网络不可达 → 记 `timeout`，**先提示用户检查代理/网络**；页面校验拦截 → 记 `blocked`，提示人工核对。**两者处置不同，不要混** |
 | 提交方式 | ⚠ **键盘 Enter 不触发提交**，必须点搜索按钮（`btnG`）【实测】 |
 | ⚠ URL 陷阱 | 该站用 JS 重写 history，**提交成功后地址栏仍是根路径** → 不能用 `tab_url` / `tab_title` 判成功，只能截图【实测】 |
 | 弹层 | 首页右下有 `Scholar PDF Reader` 推广浮层，未交互；坐标点击前注意遮挡【实测】 |
 | 官方态度 | **无公开 API**；robots 禁抓 `/scholar`、`/search`、多数 `/citations?`；ToS 要求自动化须书面许可【联】 |
-| 本 Skill 定位 | **不作为自动化数据源**。允许：帮用户读**一屏**结果（截图）、把题名交给 L1 用 OpenAlex/Crossref 核 DOI。禁止：循环翻页、批量抓题录、爬 Cited by、用代理/轮换 IP 规避风控 |
+| 本 Skill 定位 | **不作为自动化数据源**。允许：帮用户读**一屏**结果（截图）、把题名交给 L1 用 OpenAlex/Crossref 核 DOI。禁止：循环翻页、批量抓题录、爬 Cited by、并发取数 |
 | 语法 | `"精确短语"`、`OR`（大写）、`-排除`、`intitle:`、`author:`、`site:`、`filetype:`【联】 |
 | 唯一价值 | 灰色文献 / 中文 / 学位论文收录更全，且比 OpenAlex 更早看到新文献 → 开放渠道查不到时让用户手动搜，或读一屏 |
 
