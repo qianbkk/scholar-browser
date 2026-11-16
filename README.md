@@ -1,6 +1,6 @@
 # scholar-browser
 
-学术文献检索与获取工作流（WorkBuddy / Claude Code 兼容的 `SKILL.md` 技能）。
+学术文献检索与获取工作流（`SKILL.md` 格式技能）。**完整支持 WorkBuddy**；其他 agent 的浏览器方案尚未适配，见下方[兼容性](#兼容性)。
 
 三级路由：**先宽泛发现**拿到 DOI/PMID/arXiv ID → **再尝试 OA 直取**（魔数闸门校验）→ **未成功再在你的浏览器里**按平台流程逐页操作。下载文件自动校验、去重、规范命名后归集到工作区。
 
@@ -33,7 +33,7 @@ Windows 对应 `C:\Users\<你>\.workbuddy\skills\scholar-browser`。放好后新
 
 **方式三：Claude Code / 其他兼容 agent**
 
-放进对应 agent 的 skills 目录（同为 `SKILL.md` 格式）。
+可以放，但要清楚边界：**脚本层（发现、直取、题录、归集校验）只依赖 Python 标准库，直接可用**；**L3 浏览器段按 WorkBuddy 的 browser-use 插件写成，其他 agent 未做适配**——工具名不同时需自行映射，未必完全可用。详见[兼容性](#兼容性)。
 
 ## 配置放哪（升级不丢）
 
@@ -92,10 +92,20 @@ scripts/                 零依赖脚本（仅 Python 标准库）
 
 渐进式披露：SKILL.md 常驻上下文，references 按需加载（单次任务最多再加载 3 个）。
 
+## 兼容性
+
+| 层 | 适用范围 | 说明 |
+|---|---|---|
+| 脚本层（L1 发现 / L1.5 中文期刊官网 / L2 直取 / 题录摘要 / 归集校验） | **任何 agent** | 8 个 Python 文件只用标准库，无 MCP 依赖 |
+| L3 浏览器协作 | **仅 WorkBuddy** | 工具名来自其 browser-use 插件（`tabs_new` / `user_open_tabs` / `dom_cua_get_visible_dom` / `cua_click` / `tab_screenshot` / `tabs_close` 等） |
+| 其他 agent 的浏览器方案 | **未适配** | Playwright MCP、DevTools 封装、agent 内置浏览器等均未测试，**未必完全可用** |
+
+移植要做的事：把 L3 的 7 个语义动作（列浏览器 / 标签管理 / 读页面结构 / 交互 / 截图 / 导航 / 关标签）映射到目标方案，见 `references/toolchain.md` §1。两点无法靠改名解决——**登录态复用**（这里靠浏览器扩展借用你已登录的会话，换方案通常要自己登录持久化 profile）与**下载落盘**（这里靠点击触发真实下载再由脚本收件，有的方案可直接存到指定路径，归集逻辑要相应调整）。
+
 ## 环境要求
 
 - Python 3.9+，**无第三方依赖**
-- 浏览器兜底需要 WorkBuddy 的浏览器扩展（Chrome / Edge）并使用**你自己的登录态**
+- 浏览器段（L3）需要 WorkBuddy + 其浏览器扩展（Chrome / Edge），使用**你自己的登录态**；其他 agent 无等价方案时，L3 相关平台只能走手动另存
 - 可选：`SCHOLAR_EMAIL`（Unpaywall 要求真实邮箱，不配则跳过，候选变少）
 - 可选：`--proxy` / `--auto-proxy`（**机构订阅库必须直连**，代理会让机构授权失效）
 
@@ -149,7 +159,7 @@ python <skill_dir>/scripts/audit.py --verbose # 逐项列出
 
 ## 版本
 
-当前 `3.4.0`。变更记录见 `references/CHANGELOG.md`。
+当前 `3.4.1`。变更记录见 `references/CHANGELOG.md`。
 
 ## License
 

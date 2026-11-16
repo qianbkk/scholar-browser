@@ -17,6 +17,29 @@
 
 **自定义 MCP server 无法复用登录态**：Edge 扩展经 native messaging stdio 与 host 通信，`com.workbuddy.extension.json` 的 `allowed_origins` 只放行三个固定扩展 ID。
 
+**跨 agent 可移植性（2026-11-16 核对）**
+
+本 Skill 的 L3 段**按 WorkBuddy 的 browser-use 插件写成**，工具名是它的语义。其他 agent 的浏览器方案（Playwright MCP、Chrome DevTools 封装、agent 自带内置浏览器等）**目前未做适配，未必完全可用**。
+
+移植所需的能力只有 7 个，缺任何一个都要改写对应的平台 SOP：
+
+| # | 动作 | 本 Skill 用的工具 | 缺了会怎样 |
+|---|---|---|---|
+| 1 | 列出可用浏览器、确认带登录态 | `browsers_list` / `browser_info` | 无法判断能否借用用户已登录的会话 |
+| 2 | 取用户已有标签 / 新建标签 | `user_open_tabs` / `tabs_new` | 收尾清场、"不动用户原有页面"的约束失效 |
+| 3 | 读页面结构（DOM / 可访问性树） | `dom_cua_get_visible_dom` | 找下载按钮、核对机构名都做不了 |
+| 4 | 点击 / 输入 / 滚动 | `cua_click` / `dom_cua_type` / `cua_scroll` | 无法逐页操作 |
+| 5 | 截图 | `tab_screenshot` | 无法双验（SPA 场景下 URL 单独不可信） |
+| 6 | 跳转 / 刷新 / 取 URL 与标题 | `tab_goto` / `tab_reload` / `tab_url` / `tab_title` | 导航与成功判据缺失 |
+| 7 | 关闭标签 | `tabs_close` | 残留页会重跑下载脚本（实测踩过） |
+
+两点**不是改名能解决的**：
+
+- **登录态复用**：这里靠浏览器扩展 + native messaging 直接借用用户已登录的会话。换其他方案通常要用户自己登录一个持久化 profile，或导出 storageState。
+- **下载落盘**：这里靠"点击触发浏览器真实下载 → 脚本从下载目录收件"。有的方案能直接 `saveAs` 到指定路径，那第 4 步和归集逻辑都会变简单，但 `litadopt.py` 的基线比对模式要相应调整。
+
+**不受影响的层**：L1 发现、L1.5 中文期刊官网、L2 直取、题录与摘要、归集校验（`adopt` / `verify` / `report`）——只依赖 Python 标准库，换 agent 可直接用。
+
 ### 1.0 从零启动浏览器（用户授权时，2026-11-15 实测）
 
 无窗口时 `tabs_new` 报 `No current window`，即使 `browsers_list` 显示扩展在线。用户授权后按以下顺序恢复：
