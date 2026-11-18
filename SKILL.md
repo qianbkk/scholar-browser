@@ -7,10 +7,10 @@ license: MIT
 agent_created: true
 display_name: 学术文献获取
 display_name_en: Scholar Literature Fetcher
-description: 学术文献检索与获取工作流，五通道分层路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试开放获取直取 PDF（魔数闸门校验），未成功则在用户自己的浏览器（Edge/Chrome 扩展）中按平台流程逐页操作，覆盖知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect；拿不到全文时回填题录与摘要；文件自动校验、去重、规范命名后归集到工作区。**适用人群**：本技能的完整能力面向**有机构登录态**的用户（在校学生/教师、科研院所人员，校园网或 CARSI 漫游）以及**已购个人订阅**者——此时订阅刊与知网/万方全文均可获取；**无机构登录态**的普通用户只能使用开放获取通道，英文约 1/3 可直取、中文限开放获取刊，订阅刊仅给题录+摘要+可打开链接。**不代替、不索取任何机构权限**，登录只在用户自己的浏览器里完成。触发词：查文献、检索文献、搜论文、找文献、下载论文、下载文献、能不能下、OA 全文、高级检索、检索式、知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、已登录浏览器、浏览器取全文、文献归集、下载目录不留。**不适用于**通用网页抓取、表单填写、站点测试、商品或社媒数据采集（那类需求改用通用浏览器技能）。
-description_zh: 四级路由的学术文献获取：发现 → 开放获取直取 → 浏览器协作 → 摘要回填，自动归集到工作区。完整能力面向有机构登录态（学生/教师/科研院所）或已购订阅的用户；无机构登录态时仅开放获取通道可用，订阅刊给题录+摘要+链接。
-description_en: Four-tier literature workflow - broad discovery, open-access direct fetch with magic-byte validation, browser-assisted retrieval in the user's own session, then abstract backfill; auto-adopts downloads into the workspace. Full coverage assumes institutional access (campus network or CARSI) or a personal subscription; without it only open-access channels apply, and subscription articles are delivered as metadata + abstract + working links. Not for general web scraping, form filling, site QA, or product/social scraping.
-version: 3.6.0
+description: 学术文献检索与获取工作流，五通道分层路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试开放获取直取 PDF（魔数闸门校验），未成功则在用户自己的浏览器（Edge/Chrome 扩展）中按平台流程逐页操作，覆盖知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect；拿不到全文时回填题录与摘要；文件自动校验、去重、规范命名后归集到工作区。**适用人群**：本技能的完整能力面向**有机构登录态**的用户（在校学生/教师、科研院所人员，校园网或 CARSI 漫游）以及**已购个人订阅**者——此时订阅刊与知网/万方全文均可获取；**无机构登录态**的普通用户只能使用开放获取通道，英文约 1/3 可直取、中文限开放获取刊，订阅刊仅给题录+摘要+可打开链接。**不代替、不索取任何机构权限**，登录只在用户自己的浏览器里完成。**触发词分两级**：**强触发**（单独出现即触发）——查文献、检索文献、搜论文、找文献、下载论文、下载文献、文献综述、文献归集、导出题录、OA 全文、浏览器取全文、这篇能不能下；**弱触发**（须与“文献/论文/期刊/全文/DOI”同句共现）——知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、高级检索、检索式、已登录浏览器。**不适用于**通用网页抓取、表单填写、站点测试、软件/视频/素材下载、商品或社媒数据采集、专利与标准检索（那类需求改用通用浏览器技能）。
+description_zh: 五通道分层路由的学术文献获取：发现 → 中文期刊官网 → 开放获取直取 → 浏览器协作 → 摘要回填，自动归集到工作区。完整能力面向有机构登录态（学生/教师/科研院所）或已购订阅的用户；无机构登录态时仅开放获取通道可用，订阅刊给题录+摘要+链接。
+description_en: Five-channel literature workflow - broad discovery, Chinese journal sites, open-access direct fetch with magic-byte validation, browser-assisted retrieval in the user's own session, then abstract backfill; auto-adopts downloads into the workspace. Full coverage assumes institutional access (campus network or CARSI) or a personal subscription; without it only open-access channels apply, and subscription articles are delivered as metadata + abstract + working links. Not for general web scraping, form filling, site QA, or product/social scraping.
+version: 3.5.1
 ---
 
 # 学术文献获取工作流（五通道分层路由）

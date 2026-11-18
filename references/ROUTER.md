@@ -21,7 +21,7 @@
 | `browser-adapters.md` | 7 个语义动作 → 各方案工具名的映射参考（**仅 WorkBuddy 实测，其余参考用**）、缺能力时的降级 | 换 agent / 工具名对不上 / 手上没有浏览器 MCP |
 | `sd-batch.md` | 订阅型 PDF 落盘边界 + ScienceDirect 批量 ZIP 全流程与实测限制 | 要判断订阅 PDF 能否自动拿到 / 走 SD 批量下载 |
 | `runtime.md` | 标签页会话基线（snapshot/plan）+ 代理与邮箱配置 | 要开浏览器 / 报 timeout / 配 `SCHOLAR_EMAIL` |
-| `CHANGELOG.md` | 版本变更记录（3.0.0 → 3.5.0） | 判断手上这份是不是最新 / 对照他人版本 |
+| `CHANGELOG.md` | 版本变更记录（3.0.0 → 3.5.1） | 判断手上这份是不是最新 / 对照他人版本 |
 | `syntax.md` | 8 个平台的检索字段与运算符 + 精确直达矩阵 | 需要构造检索式或精确直达 |
 | `platforms-cn-journal.md` | 中文期刊官网真 PDF（L1.5，实测 12 篇） | 拿到中文期刊 DOI、要先试官网 |
 | `platforms-cnki.md` | CNKI 详细 SOP（A 级，本机实测） | 操作知网 |

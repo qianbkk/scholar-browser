@@ -173,7 +173,7 @@ python <skill_dir>/scripts/audit.py --verbose # 逐项列出
 
 ## 版本
 
-当前 `3.6.0`。变更记录见 `references/CHANGELOG.md`。
+当前 `3.5.1`。变更记录见 `references/CHANGELOG.md`。
 
 ## License
 
