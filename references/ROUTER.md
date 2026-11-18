@@ -15,12 +15,13 @@
 |---|---|---|
 | `ROUTER.md` | 本文件 | 任何任务开始 |
 | `limits.md` | 合规红线、登录态失效信号、文件安全契约、诚实边界 | 任何任务开始 |
+| `abstract-recovery.md` | **L1.6 摘要回填**：通道优先级（实测命中率）、DOI→PII、中文四入口、站点坑、三条打法、交付格式 | 全文拿不到要补摘要 / 清单缺摘要 |
 | `discovery.md` | **三级路由**：L1 渠道优先级与坑、L2 闸门与 reason 码、L3 触发判定、工具取舍 | 找文献 / 判断能否直取 / 决定要不要开浏览器 |
 | `toolchain.md` | 浏览器工具边界、DOM 与输入策略、失败回退、下载目录与回滚 | DOM 读不到 / 节点失效 / 超时 / 输入不生效 / 跑脚本 |
 | `browser-adapters.md` | 7 个语义动作 → 各方案工具名的映射参考（**仅 WorkBuddy 实测，其余参考用**）、缺能力时的降级 | 换 agent / 工具名对不上 / 手上没有浏览器 MCP |
 | `sd-batch.md` | 订阅型 PDF 落盘边界 + ScienceDirect 批量 ZIP 全流程与实测限制 | 要判断订阅 PDF 能否自动拿到 / 走 SD 批量下载 |
 | `runtime.md` | 标签页会话基线（snapshot/plan）+ 代理与邮箱配置 | 要开浏览器 / 报 timeout / 配 `SCHOLAR_EMAIL` |
-| `CHANGELOG.md` | 版本变更记录（3.0.0 → 3.1.0） | 判断手上这份是不是最新 / 对照他人版本 |
+| `CHANGELOG.md` | 版本变更记录（3.0.0 → 3.5.0） | 判断手上这份是不是最新 / 对照他人版本 |
 | `syntax.md` | 8 个平台的检索字段与运算符 + 精确直达矩阵 | 需要构造检索式或精确直达 |
 | `platforms-cn-journal.md` | 中文期刊官网真 PDF（L1.5，实测 12 篇） | 拿到中文期刊 DOI、要先试官网 |
 | `platforms-cnki.md` | CNKI 详细 SOP（A 级，本机实测） | 操作知网 |
@@ -44,7 +45,8 @@
 |---|---|---|
 | 任何任务开始 | `ROUTER.md` + `limits.md` | — |
 | 「找几篇关于 X 的文献」 | `discovery.md` §2 | `syntax.md` |
-| 「这篇能不能下 / 有没有全文」 | `discovery.md` §3–§4 | — |
+| 「这篇能不能下 / 有没有全文」 | `discovery.md` §3–§4 | `abstract-recovery.md` |
+| **全文下不到，要题录 + 摘要原文** | `abstract-recovery.md` | `platforms-cn-journal.md` |
 | 有 DOI / PMID / arXiv ID | `discovery.md` §3 | — |
 | 用户点名平台 | 对应 `platforms-*.md` | `syntax.md` 对应节 |
 | 构造高级检索式 | `syntax.md` | 对应平台文件 |
@@ -82,6 +84,7 @@ scholar-browser/
 ├── references/              ← 按需加载的知识（一次任务最多再读 3 个）
 │   ├── ROUTER.md            ← 本文件：路由表 + 加载预算
 │   ├── limits.md            ← 合规红线（必读）
+│   ├── abstract-recovery.md ← L1.6 摘要回填（通道优先级与站点坑）
 │   ├── discovery.md         ← L1 / L2 / L3 判定与渠道优先级
 │   ├── syntax.md            ← 8 平台检索式语法与精确直达
 │   ├── toolchain.md         ← 浏览器工具边界、DOM/截图、失败回退、回滚

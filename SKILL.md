@@ -10,7 +10,7 @@ display_name_en: Scholar Literature Fetcher
 description: 学术文献检索与获取工作流，三级路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试开放获取直取 PDF（魔数闸门校验），未成功则在用户自己的浏览器（Edge/Chrome 扩展）中按平台流程逐页操作，覆盖知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect；文件自动校验、去重、规范命名后归集到工作区。触发词：查文献、检索文献、搜论文、找文献、下载论文、下载文献、能不能下、OA 全文、高级检索、检索式、知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、已登录浏览器、浏览器取全文、文献归集、下载目录不留。**不适用于**通用网页抓取、表单填写、站点测试、商品或社媒数据采集（那类需求改用通用浏览器技能）。
 description_zh: 宽泛发现 + 开放获取直取 + 浏览器协作，检索学术文献并自动归集到工作区。
 description_en: Three-tier literature workflow - broad discovery, open-access direct fetch with magic-byte validation, then browser-assisted retrieval in the user's own session across CNKI, Wanfang, VIP, WoS, PubMed, arXiv and ScienceDirect; auto-adopts downloads into the workspace. Not for general web scraping, form filling, site QA, or product/social scraping.
-version: 3.4.2
+version: 3.5.0
 ---
 
 # 学术文献获取工作流（三级路由）
@@ -28,6 +28,7 @@ Python 用 PATH 上的 `python`（3.9+ 即可，仅标准库，无第三方依�
 |---|---|---|---|
 | **L1 宽泛发现** | 主题 → 题名 + DOI/PMID/arXiv ID | `oa_fetch.py search` / `cite` 引文滚雪球 + 开放 API + WebSearch + 中文站内检索 | 一开始，永远先做 |
 | **L1.5 中文期刊官网** | DOI → 官网真 PDF（**比知网好**） | `scripts/fetch_cn_journal.py` | 中文期刊 DOI 到手就试，早于 L3 |
+| **L1.6 摘要回填** | 全文拿不到 → 把题录 + **摘要原文**补齐 | `references/abstract-recovery.md` | 全文失败、或清单缺摘要时；**不是脚本活，是 AI 侧动作** |
 | **L2 直接获取** | 标识符 → 过闸门的 PDF | `scripts/oa_fetch.py` | 拿到 DOI 立刻试 |
 | **L3 浏览器协作** | 需登录或需交互的全文 | `mcp__browser__*` + 平台 SOP | L2 失败且原因指向"需浏览器" |
 
@@ -39,6 +40,7 @@ Python 用 PATH 上的 `python`（3.9+ 即可，仅标准库，无第三方依�
 4. 目标平台是**知网/万方/维普** → **跳过 L2**，直接 L3（中文订阅库直连无意义）。
 5. **中文文献（有 DOI）→ 先 L1.5 官网直取，再万方，最后知网**：官网和万方都给**真 PDF**；知网多给 KDH/CAJ，需阅读器。
 6. 中文文献 → L1 必须走中文站内检索，开放 API 对中文覆盖弱。
+7. **全文确定拿不到（或只缺摘要）→ 走 L1.6 摘要回填**：英文按「出版商落地页 → OpenAlex → S2 → Crossref」，中文按「期刊官网 / 知网 DOI / 知网 cdmd → 百度学术·维普镜像」。**先怀疑入口，不要先怀疑权限**（详见 `abstract-recovery.md`）。
 
 **实测底色（2026-11-13，3 个真实 DOI）**：L2 直取命中 1/3（33%），与第三方 123-DOI 实测 33%/39% 同量级。**所以 L3 不能省**，但也不该默认走。详见 `references/discovery.md`。
 
@@ -154,6 +156,7 @@ python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confi
 | 找文献、判断能不能直下、要借哪些工具思路 | `discovery.md` |
 | 构造检索式 / 精确直达 | `syntax.md` |
 | **拿中文期刊真 PDF（优先于知网）** | `platforms-cn-journal.md` |
+| **全文拿不到，要补题录 + 摘要原文** | `abstract-recovery.md` |
 | 操作知网 | `platforms-cnki.md` |
 | 操作万方 / 维普 | `platforms-cn.md` |
 | 操作 WoS / PubMed / arXiv / ScienceDirect / GS | `platforms-global.md` |
@@ -177,7 +180,9 @@ python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confi
 | **拿到 PDF** | 文件落盘 + 校验通过 + 记录（含 OA 状态、版本、来源、`via`） |
 | **没拿到全文** | 题名、作者、来源、年份、DOI/PMID/arXiv ID、**摘要（有多少给多少）**、**至少一个可打开链接**、以及**为什么没拿到**（需订阅 / 需校验 / 需机构 / 找不到） |
 
-**摘要优先级**：① 出版商官方 RIS 导出（最全最准，SD 实测 25/25 有摘要）→ `ris_meta.py`；② Crossref / OpenAlex / PubMed efetch（`meta` 自动依次试）；③ Semantic Scholar（无 key 常 429，退避一次即跳过，不要刷）；④ 全无 → 如实写「该库未提供摘要」+ DOI + GS 链接，**不编造**。
+**摘要优先级（2026-11 两轮实测，67 条补齐）**：① **出版商/期刊落地页**（摘要是原文，42/42 命中；注意 `curl` 访问 ScienceDirect 一律 403，须用带渲染的抓取）；② 出版商 RIS 导出（SD 实测 25/25）→ `ris_meta.py`；③ 中文走期刊官网 / `link.cnki.net/doi/` / `cdmd.cnki.com.cn` / 百度学术·维普镜像（4/4）；④ OpenAlex → S2（429 时退避一次即跳过）→ Crossref（Elsevier 基本无摘要）；⑤ 全无 → 如实写「该库未提供摘要」+ 可打开链接，**不编造**。完整打法与站点坑见 `abstract-recovery.md`。
+
+**「主要内容」不等于摘要翻译**：交付时要压成"做了什么 + 什么方法 + 关键数字/结论 + 对本课题何用"的 2–4 句；只贴英文摘要原文等于没做这一步。每条摘要必须标来源（出版商页面实测 / 图谱 / 中文镜像），**DOI 与卷期一律取自已核验清单，不凭印象写**。
 
 **判断标准：用户拿着这条记录，能自己点开链接继续。** 只回一句"下不了"是不合格的。拿不到全文时按序给替代路径：OA 副本 → 出版商/PubMed/arXiv 可打开链接 → 同主题替代文献（1–2 篇能拿到的，说明替代了什么）→ 校园网 / CARSI / 文献传递 / 向作者索取。
 
@@ -191,6 +196,8 @@ python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confi
 - 完全 OA 站点也可能因 TLS 指纹被拒（MDPI/PLOS/PMC 有报告）→ L2 固有上限，不是 bug。
 - Edge 扩展偶发超时（claim/DOM/点击/finalize）：同操作最多重试一次，**不 taskkill、不反复重启**；`No current window` 且用户已授权时打开新窗口，仍失败请用户点一次扩展图标。
 - 只对 §2 列出的平台负责；其余平台不声称验证过。
+- **摘要是"渲染后才有"的内容**：本机 `curl` 访问 ScienceDirect 一律 403，`r.jina.ai` 类文本代理不可用；部分站点用 WAF 挑战页（`HTTP 202` + JS）挡下载链接，渲染抓取也过不去，只能交用户点一次。见 `abstract-recovery.md` §3、§6。
+- 万方（`s.` / `d.wanfangdata.com.cn`）与部分镜像站有滑块/真人验证，**程序化通道取不到**；中文摘要优先换百度学术、维普高校镜像等转载源。
 - **浏览器段目前只适配 WorkBuddy**：L3 的工具名来自其 browser-use 插件，换成 Playwright 等其他方案需自行映射（见 `browser-adapters.md`），未适配、未必完全可用；脚本层不受影响。
 
 版本与变更历史见 `references/CHANGELOG.md`。
