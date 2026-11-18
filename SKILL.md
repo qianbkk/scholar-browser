@@ -7,197 +7,157 @@ license: MIT
 agent_created: true
 display_name: 学术文献获取
 display_name_en: Scholar Literature Fetcher
-description: 学术文献检索与获取工作流，三级路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试开放获取直取 PDF（魔数闸门校验），未成功则在用户自己的浏览器（Edge/Chrome 扩展）中按平台流程逐页操作，覆盖知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect；文件自动校验、去重、规范命名后归集到工作区。触发词：查文献、检索文献、搜论文、找文献、下载论文、下载文献、能不能下、OA 全文、高级检索、检索式、知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、已登录浏览器、浏览器取全文、文献归集、下载目录不留。**不适用于**通用网页抓取、表单填写、站点测试、商品或社媒数据采集（那类需求改用通用浏览器技能）。
-description_zh: 宽泛发现 + 开放获取直取 + 浏览器协作，检索学术文献并自动归集到工作区。
-description_en: Three-tier literature workflow - broad discovery, open-access direct fetch with magic-byte validation, then browser-assisted retrieval in the user's own session across CNKI, Wanfang, VIP, WoS, PubMed, arXiv and ScienceDirect; auto-adopts downloads into the workspace. Not for general web scraping, form filling, site QA, or product/social scraping.
-version: 3.5.0
+description: 学术文献检索与获取工作流，五通道分层路由：先宽泛发现（开放学术 API + 通用搜索）拿到题名与 DOI/PMID/arXiv ID，再尝试开放获取直取 PDF（魔数闸门校验），未成功则在用户自己的浏览器（Edge/Chrome 扩展）中按平台流程逐页操作，覆盖知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect；拿不到全文时回填题录与摘要；文件自动校验、去重、规范命名后归集到工作区。**适用人群**：本技能的完整能力面向**有机构登录态**的用户（在校学生/教师、科研院所人员，校园网或 CARSI 漫游）以及**已购个人订阅**者——此时订阅刊与知网/万方全文均可获取；**无机构登录态**的普通用户只能使用开放获取通道，英文约 1/3 可直取、中文限开放获取刊，订阅刊仅给题录+摘要+可打开链接。**不代替、不索取任何机构权限**，登录只在用户自己的浏览器里完成。触发词：查文献、检索文献、搜论文、找文献、下载论文、下载文献、能不能下、OA 全文、高级检索、检索式、知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、已登录浏览器、浏览器取全文、文献归集、下载目录不留。**不适用于**通用网页抓取、表单填写、站点测试、商品或社媒数据采集（那类需求改用通用浏览器技能）。
+description_zh: 四级路由的学术文献获取：发现 → 开放获取直取 → 浏览器协作 → 摘要回填，自动归集到工作区。完整能力面向有机构登录态（学生/教师/科研院所）或已购订阅的用户；无机构登录态时仅开放获取通道可用，订阅刊给题录+摘要+链接。
+description_en: Four-tier literature workflow - broad discovery, open-access direct fetch with magic-byte validation, browser-assisted retrieval in the user's own session, then abstract backfill; auto-adopts downloads into the workspace. Full coverage assumes institutional access (campus network or CARSI) or a personal subscription; without it only open-access channels apply, and subscription articles are delivered as metadata + abstract + working links. Not for general web scraping, form filling, site QA, or product/social scraping.
+version: 3.6.0
 ---
 
-# 学术文献获取工作流（三级路由）
+# 学术文献获取工作流（五通道分层路由）
 
-铁律：**能直取就不开浏览器；开了浏览器就逐页真人式操作；任何文件先过魔数闸门；只按本次新增识别文件，绝不碰历史文件；不编造平台文案。**
+铁律：**能直取就不开浏览器；开了浏览器就逐页真人式操作；任何文件先过魔数闸门；只按本次新增识别文件、绝不碰历史文件；不编造平台文案。**
 
-`<skill_dir>` = **本 SKILL.md 所在目录**（用户级安装在 `~/.workbuddy/skills/scholar-browser`；不同机器、不同用户目录不同，**不要照抄任何示例绝对路径**，运行时按实际安装位置替换）。
-`<workspace>` = 当前工作区根目录。
-Python 用 PATH 上的 `python`（3.9+ 即可，仅标准库，无第三方依赖）。
-**运行环境**：脚本层（L1 / L1.5 / L2 / 归集校验）任何 agent 都可用；**L3 浏览器段按 WorkBuddy 的 browser-use 插件写成，其他 agent 的浏览器方案未做适配**——工具名不同时按 `browser-adapters.md` 对照映射（7 个动作 + 降级方案）。
+`<skill_dir>` = 本文件所在目录（用户级装在 `~/.workbuddy/skills/scholar-browser`，换机器按实际位置替换，**不要照抄示例路径**）。
+`<workspace>` = 当前工作区根目录。Python 用 PATH 上的 `python`（3.9+，仅标准库）。
+**运行环境**：脚本层（L1 / L1.5 / L1.6 / L2 / 归集）任何 agent 都可用；**L3 浏览器段按 WorkBuddy 的 browser-use 插件写成**，其他方案未适配——工具名不同时按 `browser-adapters.md` 映射（7 个动作 + 降级）。
 
-## 1. 三级路由（先看这里，别一上来就翻页）
+## 1. 定位与适用边界（先看这张表，决定值不值得用）
 
-| 层 | 做什么 | 用什么 | 何时用 |
+本技能解决的不是"能不能搜到"，而是"**在你已有的访问权限内，把文献自动拿到手，并归集成可引用的库**"。
+
+| 你的账号状态 | 能用到哪层 | 实际效果 |
+|---|---|---|
+| **有机构登录态**（在校学生/教师、科研院所；校园网或 CARSI 漫游） | L1 → L3 全通 | 订阅刊（ScienceDirect / Wiley / Springer 等）与知网、万方可下全文。**这是本技能设计的主要场景，功能最完整** |
+| **已购个人订阅**（学会会员、单刊订阅） | L1 → L3，按订阅范围 | 有权限的刊同上；无权限的刊退回「题录 + 摘要 + 链接」 |
+| **无机构、无订阅**（独立研究者、社会用户） | 仅 L1 / L1.5（开放获取刊）/ L2 / L1.6 | 英文约 **1/3** 可直取 OA 全文（3 DOI 实测 33%，与第三方 123-DOI 的 33%/39% 同量级）；中文限开放获取刊官网 PDF；**订阅刊一律只给题录 + 摘要 + 可打开链接** |
+
+两句必须说清的话：
+
+- 本技能**不提供、不索取、不代替**任何机构权限。登录只在用户自己的浏览器里完成，不读取、不保存、不回显凭据（§4）。
+- 无登录态时**不是失败，是降级**：文件拿不到，但题录 / 摘要 / 至少一个可打开链接必须给（§7）。
+
+## 2. 五通道（按执行顺序，L1.6 兜底）
+
+| 通道 | 做什么 | 用什么 | 何时用 |
 |---|---|---|---|
-| **L1 宽泛发现** | 主题 → 题名 + DOI/PMID/arXiv ID | `oa_fetch.py search` / `cite` 引文滚雪球 + 开放 API + WebSearch + 中文站内检索 | 一开始，永远先做 |
-| **L1.5 中文期刊官网** | DOI → 官网真 PDF（**比知网好**） | `scripts/fetch_cn_journal.py` | 中文期刊 DOI 到手就试，早于 L3 |
-| **L1.6 摘要回填** | 全文拿不到 → 把题录 + **摘要原文**补齐 | `references/abstract-recovery.md` | 全文失败、或清单缺摘要时；**不是脚本活，是 AI 侧动作** |
-| **L2 直接获取** | 标识符 → 过闸门的 PDF | `scripts/oa_fetch.py` | 拿到 DOI 立刻试 |
+| **L1 发现** | 主题 → 题名 + DOI/PMID/arXiv ID | `oa_fetch.py` 的 `search` / `cite` + 开放 API + WebSearch + 中文站内检索 | 一开始，永远先做 |
+| **L1.5 中文期刊官网** | DOI → 官网真 PDF（**比知网好**） | `fetch_cn_journal.py` | 中文期刊 DOI 到手就试，早于 L3 |
+| **L2 直取** | 标识符 → 过闸门的 PDF | `oa_fetch.py` 的 `resolve` / `fetch` / `batch` | 拿到 DOI 立刻试 |
 | **L3 浏览器协作** | 需登录或需交互的全文 | `mcp__browser__*` + 平台 SOP | L2 失败且原因指向"需浏览器" |
+| **L1.6 摘要回填**（兜底） | 全文拿不到 → 补齐题录 + **摘要原文** | 按 `abstract-recovery.md` 手工走（不是脚本活） | 任何阶段确认拿不到全文后 |
 
 **判定顺序（不要颠倒）**
 
 1. 已知 DOI/PMID/arXiv ID → 直接 L2。
 2. 只有主题 → L1 拿标识符 → L2。
-3. L2 失败 → 看 `reason` 码：需要交互的（登录墙、站点校验页、订阅确认页）→ L3；页面可解析但没给 PDF（`html_landing`/`not_found`）→ 换候选再试，耗尽才 L3。
-4. 目标平台是**知网/万方/维普** → **跳过 L2**，直接 L3（中文订阅库直连无意义）。
-5. **中文文献（有 DOI）→ 先 L1.5 官网直取，再万方，最后知网**：官网和万方都给**真 PDF**；知网多给 KDH/CAJ，需阅读器。
-6. 中文文献 → L1 必须走中文站内检索，开放 API 对中文覆盖弱。
-7. **全文确定拿不到（或只缺摘要）→ 走 L1.6 摘要回填**：英文按「出版商落地页 → OpenAlex → S2 → Crossref」，中文按「期刊官网 / 知网 DOI / 知网 cdmd → 百度学术·维普镜像」。**先怀疑入口，不要先怀疑权限**（详见 `abstract-recovery.md`）。
+3. L2 失败看 `reason`：要交互的（登录墙、校验页、订阅确认页）→ L3；页面可解析却没给 PDF（`html_landing`/`not_found`）→ 换候选再试，耗尽才 L3。
+4. 目标是**知网 / 万方 / 维普** → 跳过 L2，直接 L3（中文订阅库直连无意义）。
+5. 中文文献有 DOI → 先 L1.5 官网，再万方，最后知网：官网与万方给**真 PDF**，知网多给 KDH/CAJ（需阅读器）。
+6. 确认拿不到全文、或只缺摘要 → L1.6 兜底。**先怀疑入口，不要先怀疑权限**。
 
-**实测底色（2026-11-13，3 个真实 DOI）**：L2 直取命中 1/3（33%），与第三方 123-DOI 实测 33%/39% 同量级。**所以 L3 不能省**，但也不该默认走。详见 `references/discovery.md`。
+**省时间的四条**：先标识符后翻页；先题录后全文；**权限前置**（先看机构名 / `View PDF` / 无锁图标，见到 `Get Access` 或跳登录即判无权限，不反复试探）；L2 失败要把 `reason` 带进 L3，别重复踩同一个坑。
 
-**通用策略（省时间的关键）**
+## 3. 平台速查（细节在 `platforms-*.md`）
 
-- **先标识符后翻页**；**先题录后全文**（摘要多半免费，先判断值不值得下）。
-- **权限前置**：先看机构名 / `View PDF` / 无锁图标，再点下载；`Get Access`、锁图标、跳登录页即判未订阅，不反复试探。
-- **三张清单去重**：已检索（平台 + 题名/DOI）、已判定不需要、已下载（plan + MD5）。
-- **L2 失败要留因**：把 `reason` 码带进 L3，别在浏览器里重复踩同一个坑。
+**能出 PDF 的三条路**：中文 → 期刊官网（L1.5）＞ 万方（给真 PDF）＞ 知网（多 KDH/CAJ）；英文 OA → arXiv / PMC / Unpaywall（L2）；英文订阅 → SD 批量 ZIP 或机构 L3。
 
-## 2. 平台覆盖：8 个 + 中文期刊官网，各司其职
+**已知不能自动化**：维普（DOM/CUA 持续超时）、Web of Science（输入写不进）。**其余平台只作发现与核验，不要当下载站用**。
 
-**关键认知：不要指望一个平台包办"找到 + 下载"。** 平台分两种用途——**发现**（找题名与标识符）和**宿主**（真给 PDF）。把它们都当下载站用只会浪费时间。
+表外平台（SpringerLink、Wiley、IEEE、Scopus、读秀、百度学术、专利库等）**不在保证范围**：用户点名时按统一字段模板临时试，**不得声称已验证**。等级 A = 真实点击实测通过 / B = 入口字段有依据但流程不完整 / C = 仅收录；逐平台实到哪一步见 `ROUTER.md` 平台映射与对应平台文件。
 
-| 平台 | 角色 | 实测跑通到哪一步 |
-|---|---|---|
-| 中国知网 CNKI | 中文全文主通道（L3） | 检索 ✓ 题录 ✓ **全文 ✓**（多为 KDH/CAJ） |
-| 万方 | **中文全文首选**（L3） | 检索 ✓ 题录 ✓ **全文 ✓**（12 篇，**给真 PDF**） |
-| 中文期刊官网 | 中文真 PDF（L1.5） | 12 篇实测（力学 / 工程类中文刊） |
-| 维普 | **当前不可自动化** | 检索 ✗（DOM/CUA 持续超时） |
-| Google Scholar | 灰色文献/中文补充（**视网络环境**） | 检索 ✓；提交须点按钮，Enter 无效 |
-| Web of Science | 引文发现（L1），非宿主 | 检索 ✗（输入写不进、截图空白） |
-| PubMed / PMC | 题录发现（L1），全文交 L2 | 检索 ✓；列表页无摘要，`Free PMC` 可见 |
-| arXiv | 预印本（**L2 优先**） | 检索 ✓ **全文 ✓**（L2 实测 2.2 MB） |
-| ScienceDirect | 订阅出版商（L2 优先，L3 兜底） | 题名/期刊/`View PDF` href 全在 DOM |
+## 4. 红线（完整版见 `limits.md`）
 
-**端到端能拿到 PDF 的路径**：中文 → CNKI（万方优先）；英文 OA → arXiv / PMC / Unpaywall（L2）；英文订阅 → SD 批量 ZIP 或机构 L3。**其余平台的价值在发现与核验，不在下载。**
-
-不在表内的平台（SpringerLink、Wiley、IEEE、Scopus、读秀、百度学术、专利库等）**不在保证范围**：用户点名时可按同一套字段模板临时试，**不得声称已验证**。等级：A = 真实点击实测通过；B = 入口/字段有依据但流程不完整；C = 仅收录。
-
-## 3. 红线（完整版见 `references/limits.md`）
-
-1. **凭据归用户**：登录只在用户自己的浏览器里完成；不读取、不保存、不回显任何登录凭据。
-2. **尊重访问限制**：只获取公开可用的，或用户本人有权访问的内容；遇登录墙、校验页、订阅确认页即停止当前条目，转正规渠道（校园网 / 图书馆文献传递 / OA 版本 / 向作者索取）。
+1. **凭据归用户**：登录只在用户自己的浏览器里完成，不读取、不保存、不回显任何凭据。
+2. **尊重访问限制**：只获取公开可用的、或用户本人有权访问的内容；遇登录墙、校验页、订阅确认页即停止该条目，转正规渠道（校园网 / 图书馆文献传递 / OA 版本 / 向作者索取）。
 3. **人工节奏**：逐篇检索、逐篇点击、串行、留间隔；API 侧串行 + 限速 + 缓存。
 4. **遇阻停机**：访问受限、限流、跳登录页 → 停队列标「需人工」，同一动作最多重试一次。
 5. **不误伤文件、不编造**：只处理本轮基线后新增 + 白名单 + 魔数通过的文件；没实测的文案/字段/URL 一律标「待实测」。
-6. **浏览器需授权才启动**：默认不主动开 GUI 浏览器；用户说「启动我的浏览器 / 用浏览器下载 / 可以启动」时才启动。启动不改变前 5 条；**不 taskkill、不反复重启**。
+6. **浏览器需授权才启动**：用户说「启动我的浏览器 / 用浏览器下载 / 可以启动」时才启动。启动不改变前 5 条；**不 taskkill、不反复重启**。
 
-## 4. 流水线
+## 5. 流水线
 
 | 阶段 | 执行者 | 动作 |
 |---|---|---|
 | A 基线 | 脚本 | `init-baseline` — **任何下载前必做** |
-| B 发现 | AI | L1：查 `discovery.md` §2 选渠道 → 题名 + 标识符 → Crossref 核验 |
-| C 直取 | 脚本 | L2：`oa_fetch.py fetch` → 过闸门才落盘 |
-| D 浏览器 | AI + 浏览器 | L3：查平台 SOP → 逐篇单击 → 核验落盘 |
+| B 发现 | AI | L1：按 `discovery.md` §2 选渠道 → 题名 + 标识符 → Crossref 核验 |
+| C 直取 | 脚本 | L2：`fetch` → 过闸门才落盘 |
+| D 浏览器 | AI + 浏览器 | L3：按平台 SOP 逐篇单击 → 核验落盘 |
 | E 归集 | 脚本 | `scan-new` → `adopt` → `verify` → `report` |
-| F 清场 | AI + 浏览器 | **只关本轮新增的标签页**；用户原有页一律不动（见 `runtime.md` §1） |
+| F 清场 | AI + 浏览器 | **只关本轮新增的标签页**，用户原有页一律不动（`runtime.md` §1） |
 
-**固定开场（每次任务重新取标识）**
+**固定开场（每次任务重新取标识）**：`browsers_list → browser_info → user_open_tabs → snapshot 存基线 → tabs_new`。
+必须选 `type: "extension"`（带真实登录态）；内置无登录态实例不可用。**取到 `user_open_tabs` 就立刻存基线再开新页**——顺序反了，收尾分不清哪些页是我开的。
 
-```
-browsers_list → browser_info → user_open_tabs → snapshot 存基线 → tabs_new
-```
-必须选 `type: "extension"`（带真实登录态）；内置 `WorkBuddy Browser` 无登录态。**取到 `user_open_tabs` 就立刻存基线再开新页**——顺序反了，收尾分不清哪些页是我开的。
-
-**浏览器实操只有三条要记**（其余见 `toolchain.md`）：可读性按站点分（DOM 抓链接与 href，截图补静态文本）；输入没有跨站可靠方案（提交前必须读回 `input.value`）；**URL 不能单独当成功判据**，必须 URL + 截图双验（CNKI 是 SPA、PubMed 校验页会伪装成成功）。
-
-### 脚本命令
+## 6. 常用命令
 
 ```bash
-# 配置诊断：每项配置实际生效的位置与来源（project / user / 内置）
-python "<skill_dir>/scripts/oa_fetch.py" config
-
-# 自检（只读）：一致性 / 引用完整性 / 脚本可用性 / 发布卫生
-python "<skill_dir>/scripts/audit.py"
+# 诊断与自检
+python "<skill_dir>/scripts/oa_fetch.py" config          # 每项配置实际生效的位置与来源
+python "<skill_dir>/scripts/audit.py"                     # 只读自检，一个命令出结论
 
 # L1 发现
-python "<skill_dir>/scripts/oa_fetch.py" search --query "<关键词>" --from-year 2020 --limit 25 --field title_abstract --out <dir>/q1.json
+python "<skill_dir>/scripts/oa_fetch.py" search --query "<关键词>" --from-year 2020 --limit 25 --out <dir>/q1.json
 python "<skill_dir>/scripts/oa_fetch.py" cite --doi <种子DOI> --direction cited_by --limit 30
 
-# L2 直取（不需要浏览器）
+# L2 直取
 python "<skill_dir>/scripts/oa_fetch.py" resolve --doi <DOI>
 python "<skill_dir>/scripts/oa_fetch.py" fetch --doi <DOI> --out "<workspace>/文献/<主题>/xx.pdf"
 python "<skill_dir>/scripts/oa_fetch.py" batch --list <DOI清单> --out-dir "<workspace>/.workbuddy/tmp/oa-batch" --interval 2
 python "<skill_dir>/scripts/oa_fetch.py" check --file "<path>"
 
 # L1.5 中文期刊官网真 PDF
-python "<skill_dir>/scripts/fetch_cn_journal.py" --csv "<workspace>/文献/00_索引与报告/文献总清单.csv" --dest "<workspace>/文献/中文期刊全文-官网PDF" --out <dir>/cn-pdf-result.json
+python "<skill_dir>/scripts/fetch_cn_journal.py" --csv "<workspace>/文献/00_索引与报告/文献总清单.csv" --dest "<workspace>/文献/中文期刊全文-官网PDF" --out <dir>/cn.json
 
-# 取不到的 → 可点击清单，交用户手动另存
-python "<skill_dir>/scripts/oa_fetch.py" checklist --list <DOI清单> --out "<workspace>/文献/待下载清单-<主题>.md"
+# 取不到 → 可点击清单，交用户手动另存
+python "<skill_dir>/scripts/oa_fetch.py" checklist --list <DOI清单> --out "<workspace>/文献/待下载清单.md"
 
-# 出版商题录导出 → 摘要（下不到全文时的首选）
+# 订阅刊批量 ZIP 导入（流程见 sd-batch.md） / RIS 题录+摘要
+python "<skill_dir>/scripts/sd_zip.py" --zip "<下载目录>/ScienceDirect_articles_*.zip" --target-dir "<workspace>/文献/<主题>" [--dry-run]
 python "<skill_dir>/scripts/ris_meta.py" --ris "<下载目录>/ScienceDirect_citations_*.ris" --md "<workspace>/文献/导出题录与摘要.md"
 
-# 订阅型 PDF：SD 批量 ZIP 导入（流程见 sd-batch.md）
-python "<skill_dir>/scripts/sd_zip.py" --zip "<下载目录>/ScienceDirect_articles_*.zip" --target-dir "<workspace>/文献/<主题>" [--dry-run]
-
-# 下载归集
+# 归集
 python "<skill_dir>/scripts/litadopt.py" init-baseline --workspace "<workspace>"
 python "<skill_dir>/scripts/litadopt.py" scan-new --workspace "<workspace>" --target-dir "<workspace>/文献/<主题>"
 python "<skill_dir>/scripts/litadopt.py" adopt --plan <plan> --workspace "<workspace>" --target-dir "<workspace>/文献/<主题>" [--move-sources]
 python "<skill_dir>/scripts/litadopt.py" verify --workspace "<workspace>"
 python "<skill_dir>/scripts/litadopt.py" report --workspace "<workspace>" --format table
-python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>"            # 只看隔离区占用
-python "<skill_dir>/scripts/litadopt.py" purge --workspace "<workspace>" --confirm  # 清理隔离区（需二次确认）
 ```
 
-`--move-sources`：把本次新增文献移到隔离区（可逆、有日志、可 `rollback`），**仅当用户明确说过「默认下载目录不留」**；否则先 `--dry-run` 出清单请确认。隔离区的清理一律等用户另行确认。
+`--move-sources` 把本次新增文献移入隔离区（可逆、有日志、可 `rollback`），**仅当用户明确说过「默认下载目录不留」**才用；否则先出清单请确认。**格式优先级 PDF > CAJ > KDH**，按魔数判真实格式（后缀不可信），**不为换格式反复重下**（每次下载都计配额，间隔 ≥3–5 秒）。
 
-**下载目录不硬编码**：`litadopt.py` 按「组策略 → Edge/Chrome `Preferences` → 注册表 `User Shell Folders` → 兜底」解析，换机器自动适配。**接受标准是"文件名 + 大小 + mtime"基线快照**。
+## 7. 交付标准：每篇都要给出「能自己继续」的东西
 
-**格式优先级 PDF > CAJ > KDH**：下完一律按**魔数**判真实格式（后缀不可信）；**不要为换格式反复重下**——每次下载都计平台配额，间隔 ≥3–5 秒。
-
-## 5. 参考文件路由（硬规则）
-
-**任何任务先读 `references/ROUTER.md` + `references/limits.md`**；之后按需加载，**一次任务最多再加载 3 个**。
-
-| 想做的事 | 读 |
-|---|---|
-| 找文献、判断能不能直下、要借哪些工具思路 | `discovery.md` |
-| 构造检索式 / 精确直达 | `syntax.md` |
-| **拿中文期刊真 PDF（优先于知网）** | `platforms-cn-journal.md` |
-| **全文拿不到，要补题录 + 摘要原文** | `abstract-recovery.md` |
-| 操作知网 | `platforms-cnki.md` |
-| 操作万方 / 维普 | `platforms-cn.md` |
-| 操作 WoS / PubMed / arXiv / ScienceDirect / GS | `platforms-global.md` |
-| **订阅型 PDF 能不能自动落盘 / SD 批量 ZIP** | `sd-batch.md` |
-| **要开浏览器：标签页基线 / 网络出口 / 邮箱** | `runtime.md` |
-| **判断某篇值不值得读/存（A/B/C/D 分级）** | 分级标准按序生效：`<项目>/.scholar-browser/triage.md` > `~/.scholar-browser/triage.md` > 内置 `triage.md`（模板） |
-| **配置在哪、为什么这次行为和上次不同** | `oa_fetch.py config`（打印每项配置的实际路径与来源） |
-| **要派子代理去执行检索/下载/归集** | `executor-brief.md` |
-| DOM 读不到、超时、输入不生效、失败回退 | `toolchain.md` |
-| **换成别的 agent / 工具名对不上** | `browser-adapters.md`（7 个动作 → 各方案映射，缺能力时怎么降级） |
-| 验证/迭代某平台 SOP | `selftest.md` |
-| 这份是不是最新 / 对照朋友那份版本 | `CHANGELOG.md` |
-| 改完本 Skill 想确认没改坏 | `scripts/audit.py`（只读自检，一个命令出结论） |
-
-## 6. 交付标准：每篇都要给出「能自己继续」的东西
-
-**这是本 Skill 的目的，不是为了"下载成功"而下载。** 每篇无论拿到全文与否，都要产出一条记录（`oa_fetch.py meta --format md` 直接产出）：
+**这是本技能的目的，不是为了"下载成功"而下载。** 每篇无论拿到全文与否都要产出一条记录：
 
 | 情况 | 交付内容 |
 |---|---|
 | **拿到 PDF** | 文件落盘 + 校验通过 + 记录（含 OA 状态、版本、来源、`via`） |
-| **没拿到全文** | 题名、作者、来源、年份、DOI/PMID/arXiv ID、**摘要（有多少给多少）**、**至少一个可打开链接**、以及**为什么没拿到**（需订阅 / 需校验 / 需机构 / 找不到） |
+| **没拿到全文** | 题名、作者、来源、年份、DOI/PMID/arXiv ID、**摘要（有多少给多少）**、**至少一个可打开链接**、**为什么没拿到**（需订阅 / 需校验 / 需机构 / 找不到） |
 
-**摘要优先级（2026-11 两轮实测，67 条补齐）**：① **出版商/期刊落地页**（摘要是原文，42/42 命中；注意 `curl` 访问 ScienceDirect 一律 403，须用带渲染的抓取）；② 出版商 RIS 导出（SD 实测 25/25）→ `ris_meta.py`；③ 中文走期刊官网 / `link.cnki.net/doi/` / `cdmd.cnki.com.cn` / 百度学术·维普镜像（4/4）；④ OpenAlex → S2（429 时退避一次即跳过）→ Crossref（Elsevier 基本无摘要）；⑤ 全无 → 如实写「该库未提供摘要」+ 可打开链接，**不编造**。完整打法与站点坑见 `abstract-recovery.md`。
+- **摘要优先级**：出版商/期刊落地页（原文，最准）→ RIS 导出 → 中文走期刊官网 / 知网 DOI / 知网 cdmd / 镜像站 → OpenAlex → S2 → Crossref。全无则如实写「该库未提供摘要」+ 链接，**不编造**。打法见 `abstract-recovery.md`。
+- **「主要内容」不是摘要翻译**：压成"做了什么 + 什么方法 + 关键数字 + 对本课题何用"的 2–4 句；每条摘要标来源；**DOI 与卷期取自已核验清单，不凭印象写**。
+- **判断标准：用户拿着这条记录能自己点开链接继续。** 只回一句"下不了"不合格。替代路径按序给：OA 副本 → 出版商/PubMed/arXiv 链接 → 同主题替代文献（说清替代了什么）→ 校园网 / CARSI / 文献传递 / 向作者索取。
+- **落盘规范**：`<workspace>/文献/<主题>/`，命名 `NN_题名_作者_来源.{pdf|caj}`，序号接目录最大值，MD5 去重，同名不同内容不覆盖；状态与日志在 `<workspace>/.litadopt/`。汇报要区分「直取(L2)」还是「浏览器(L3)」，并说明是否 OA、是否 preprint。
 
-**「主要内容」不等于摘要翻译**：交付时要压成"做了什么 + 什么方法 + 关键数字/结论 + 对本课题何用"的 2–4 句；只贴英文摘要原文等于没做这一步。每条摘要必须标来源（出版商页面实测 / 图谱 / 中文镜像），**DOI 与卷期一律取自已核验清单，不凭印象写**。
+## 8. 按需加载（渐进式披露）
 
-**判断标准：用户拿着这条记录，能自己点开链接继续。** 只回一句"下不了"是不合格的。拿不到全文时按序给替代路径：OA 副本 → 出版商/PubMed/arXiv 可打开链接 → 同主题替代文献（1–2 篇能拿到的，说明替代了什么）→ 校园网 / CARSI / 文献传递 / 向作者索取。
+**任何任务先读 `ROUTER.md` + `limits.md`；之后一次任务最多再加载 3 个 reference。** 高频四条：
 
-落盘规范：`<workspace>/文献/<主题>/`，命名 `NN_题名_作者_来源.{pdf|caj}`，序号接目录最大值，MD5 去重，同名不同内容不覆盖；状态与日志在 `<workspace>/.litadopt/`。中文期刊名/学校名**不编造**（脚本取知网 `<FileProperty>` 真字段，AI 确认后走 `--source-map`）。汇报要区分「直取(L2)」还是「浏览器(L3)」，并说明是否 OA、是否 preprint——用户需要知道能不能引用。
+| 想做的事 | 读 |
+|---|---|
+| 判断能不能直下、要不要开浏览器 | `discovery.md` |
+| 拿中文期刊真 PDF / 补中文摘要 | `platforms-cn-journal.md`、`abstract-recovery.md` |
+| 开浏览器（基线、清场、代理、邮箱） | `runtime.md` |
+| 全文拿不到但要写清"讲了什么" | `abstract-recovery.md` |
 
-## 7. 已知限制
+其余（检索式、各平台 SOP、订阅刊批量、分级标准、派子代理模板）见 `ROUTER.md` 的路由表，**不要全量加载**。
 
-- **订阅型单篇 PDF 不能自动写盘**（进阅读器 → 系统另存为）→ 走 SD 批量 ZIP，见 `sd-batch.md`。
-- 无 CAJViewer / caj2pdf → 真 CAJ 转不了；知网可能给 **KDH**，需官方阅读器。`pypdf` / `PyMuPDF` 已装，但脚本只用魔数。
-- `mcp__browser__*` 无下载管理、无本地文件读取 → 下载靠点击触发落盘，文件侧全交脚本。
-- 完全 OA 站点也可能因 TLS 指纹被拒（MDPI/PLOS/PMC 有报告）→ L2 固有上限，不是 bug。
-- Edge 扩展偶发超时（claim/DOM/点击/finalize）：同操作最多重试一次，**不 taskkill、不反复重启**；`No current window` 且用户已授权时打开新窗口，仍失败请用户点一次扩展图标。
-- 只对 §2 列出的平台负责；其余平台不声称验证过。
-- **摘要是"渲染后才有"的内容**：本机 `curl` 访问 ScienceDirect 一律 403，`r.jina.ai` 类文本代理不可用；部分站点用 WAF 挑战页（`HTTP 202` + JS）挡下载链接，渲染抓取也过不去，只能交用户点一次。见 `abstract-recovery.md` §3、§6。
-- 万方（`s.` / `d.wanfangdata.com.cn`）与部分镜像站有滑块/真人验证，**程序化通道取不到**；中文摘要优先换百度学术、维普高校镜像等转载源。
-- **浏览器段目前只适配 WorkBuddy**：L3 的工具名来自其 browser-use 插件，换成 Playwright 等其他方案需自行映射（见 `browser-adapters.md`），未适配、未必完全可用；脚本层不受影响。
+## 9. 已知限制（完整版见 `limits.md`）
 
-版本与变更历史见 `references/CHANGELOG.md`。
+- **订阅型单篇 PDF 不能自动写盘**（进阅读器 → 系统另存为）→ 走 SD 批量 ZIP（`sd-batch.md`）；批量通道随站点/账号状态变化，失败最多重试一次。
+- 无 CAJViewer / caj2pdf → 真 CAJ 转不了；知网可能给 **KDH**，需官方阅读器。脚本只用魔数判格式。
+- **摘要是"渲染后才有"的内容**：直接请求 ScienceDirect 被 403 拦下；部分站点 WAF 挑战页连渲染抓取也过不去，只能交用户点一次。万方与部分镜像站有人机校验，中文摘要优先换百度学术、维普高校镜像等转载源（`abstract-recovery.md` §6）。
+- 开放获取站点也可能因 TLS 指纹被拒（L2 固有上限，不是 bug）；`mcp__browser__*` 无下载管理与本地读文件能力，下载靠点击、文件侧全交脚本。
+- **浏览器段仅适配 WorkBuddy**，换方案需自行映射（`browser-adapters.md`）；只对 §3 提到的平台负责。
+
+版本与变更历史见 `CHANGELOG.md`。

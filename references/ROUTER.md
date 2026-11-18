@@ -16,7 +16,7 @@
 | `ROUTER.md` | 本文件 | 任何任务开始 |
 | `limits.md` | 合规红线、登录态失效信号、文件安全契约、诚实边界 | 任何任务开始 |
 | `abstract-recovery.md` | **L1.6 摘要回填**：通道优先级（实测命中率）、DOI→PII、中文四入口、站点坑、三条打法、交付格式 | 全文拿不到要补摘要 / 清单缺摘要 |
-| `discovery.md` | **三级路由**：L1 渠道优先级与坑、L2 闸门与 reason 码、L3 触发判定、工具取舍 | 找文献 / 判断能否直取 / 决定要不要开浏览器 |
+| `discovery.md` | **路由判定**：L1 渠道优先级与坑、L2 闸门与 reason 码、L3 触发判定、工具取舍（L1.6 见 `abstract-recovery.md`） | 找文献 / 判断能否直取 / 决定要不要开浏览器 |
 | `toolchain.md` | 浏览器工具边界、DOM 与输入策略、失败回退、下载目录与回滚 | DOM 读不到 / 节点失效 / 超时 / 输入不生效 / 跑脚本 |
 | `browser-adapters.md` | 7 个语义动作 → 各方案工具名的映射参考（**仅 WorkBuddy 实测，其余参考用**）、缺能力时的降级 | 换 agent / 工具名对不上 / 手上没有浏览器 MCP |
 | `sd-batch.md` | 订阅型 PDF 落盘边界 + ScienceDirect 批量 ZIP 全流程与实测限制 | 要判断订阅 PDF 能否自动拿到 / 走 SD 批量下载 |
@@ -80,7 +80,7 @@
 
 ```
 scholar-browser/
-├── SKILL.md                 ← 唯一入口：frontmatter + 三级路由 + 命令清单 + 交付标准
+├── SKILL.md                 ← 唯一入口：frontmatter + 适用边界 + 五通道路由 + 命令清单 + 交付标准
 ├── references/              ← 按需加载的知识（一次任务最多再读 3 个）
 │   ├── ROUTER.md            ← 本文件：路由表 + 加载预算
 │   ├── limits.md            ← 合规红线（必读）
