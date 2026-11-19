@@ -158,7 +158,7 @@
 |---|---|---|
 | `init-baseline` / `scan-new` / `verify` / `report` / `adopt --dry-run` | 只读（除状态目录） | ✅ |
 | `adopt` | 工作区内复制 → 校验 → 规范命名 → 落位 | ✅ |
-| `adopt --move-sources` | 把本轮 plan 内逐条列出的本次新增文献移到隔离区（可逆，非删除），≤10/批、移前二次校验 size/mtime/MD5 | ⚠️ 需用户已明确授权「默认目录不留」 |
+| `adopt`（默认） | 把本轮 plan 内逐条列出的本次新增文献**移入工作区**：复制 → 校验 MD5 → 删源；plan 外文件不碰 | ✅ 默认行为；`--keep-sources` 可关 |
 | `rollback --batch <id>` | 隔离区移回原路径、工作区副本移入 `.trash/` | ✅（用户发起） |
 | 彻底删除隔离区 | **本 Skill 不提供**，不可逆删除需用户另行明确确认 | ❌ |
 
@@ -194,7 +194,7 @@ python "<skill_dir>/scripts/oa_fetch.py" check --file <path>
 # 下载归集
 python "<skill_dir>/scripts/litadopt.py" init-baseline --workspace "<workspace>"
 python "<skill_dir>/scripts/litadopt.py" scan-new --workspace "<workspace>" --target-dir "<workspace>/文献/<主题>" [--allow-unconfirmed] [--no-history] [--settle 1.0]
-python "<skill_dir>/scripts/litadopt.py" adopt --plan <plan> --workspace "<workspace>" --target-dir "<workspace>/文献/<主题>" [--source-map <json>] [--move-sources] [--dry-run]
+python "<skill_dir>/scripts/litadopt.py" adopt --plan <plan> --workspace "<workspace>" --target-dir "<workspace>/文献/<主题>" [--source-map <json>] [--keep-sources] [--dry-run]
 python "<skill_dir>/scripts/litadopt.py" verify --workspace "<workspace>"
 python "<skill_dir>/scripts/litadopt.py" report --workspace "<workspace>" --format table
 python "<skill_dir>/scripts/litadopt.py" rollback --batch <batch-id> --workspace "<workspace>"

@@ -468,6 +468,8 @@ def cmd_scan_new(a):
 def cmd_adopt(a):
     sd = state_dir_for(a.workspace, a.state_dir)
     ensure_state(sd)
+    # 默认：把本次下载的文献移入工作区（先复制校验、再删源）；--keep-sources 才保留源
+    a.move_sources = not getattr(a, "keep_sources", False)
     if not a.plan:
         fail("adopt", 2, "缺少 --plan")
     plan = load_json(a.plan)
@@ -492,12 +494,12 @@ def cmd_adopt(a):
         emit({"schema": SCHEMA, "cmd": "adopt", "exit_code": 0,
               "dry_run": True, "batch_id": batch,
               "would_adopt": [i["src"] for i in selected],
-              "would_move_sources": [i["src"] for i in movable],
+              "would_move_sources": [i["src"] for i in movable] if a.move_sources else [],
               "target_dir": str(target), "ts": utc_now()})
         return
 
     staging.mkdir(parents=True, exist_ok=True)
-    adopted, moved, problems = [], [], []
+    adopted, problems = [], []
     idx = next_index(target)
     # ★ 全局 MD5 去重：目标目录已有同内容文件（无论叫什么名）就不再新建副本。
     #   修复前只做“同名比对”，同一 plan 重复 adopt 会生成 19_/20_… 的重复副本。
@@ -564,38 +566,32 @@ def cmd_adopt(a):
                     "size": it["size"], "name": dst_name})
         src_map[str(src)] = dst_name
 
-    # 从下载目录移走（可逆，移到隔离区；绝不 unlink）
+    # 把本次 plan 内的源移入工作区：先确认副本已校验，再删源（顺序不可颠倒）。
+    # 只处理 movable 里"确实被本次处理过"的条目（src_map 有记录），plan 之外的文件一律不碰。
+    removed = []
     if a.move_sources:
-        quarantine.mkdir(parents=True, exist_ok=True)
-        for chunk_start in range(0, len(movable), a.batch_size):
-            chunk = movable[chunk_start:chunk_start + a.batch_size]
-            for it in chunk:
-                src = Path(it["src"])
-                if not src.is_file():
-                    continue
-                try:
-                    st = src.stat()
-                    if st.st_size != it.get("size") or st.st_mtime_ns != it.get("mtime_ns") \
-                            or md5sum(src) != it.get("md5"):
-                        problems.append({"src": str(src), "result": "toctou_skip_move"})
-                        continue
-                except OSError:
-                    problems.append({"src": str(src), "result": "stat_failed_move"})
-                    continue
-                q = quarantine / src.name
-                try:
-                    shutil.move(str(src), str(q))
-                except OSError as e:
-                    problems.append({"src": str(src), "result": "move_failed:%s" % e})
-                    continue
-                moved.append({"src": str(src), "quarantine": str(q)})
-                log_op(sd, {"action": "moved", "batch_id": batch,
-                            "session_id": plan.get("session_id"), "src": str(src),
-                            "quarantine": str(q), "md5": it.get("md5"), "size": it.get("size")})
+        for it in movable:
+            src = Path(it["src"])
+            name = src_map.get(str(src))
+            if not name:
+                continue  # 未被本次处理（无对应落盘），不碰
+            dst = target / name
+            if not dst.is_file() or md5sum(dst) != it["md5"]:
+                problems.append({"src": str(src), "result": "source_kept:no_verified_copy"})
+                continue
+            try:
+                src.unlink()
+            except OSError as e:
+                problems.append({"src": str(src), "result": "source_kept:%s" % e})
+                continue
+            removed.append({"src": str(src), "dst": str(dst)})
+            log_op(sd, {"action": "source_removed", "batch_id": batch,
+                        "session_id": plan.get("session_id"), "src": str(src),
+                        "dst": str(dst), "md5": it.get("md5"), "size": it.get("size")})
 
     batch_obj = {"batch_id": batch, "session_id": plan.get("session_id"),
                  "created_at": utc_now(), "plan": str(a.plan), "target_dir": str(target),
-                 "adopted": adopted, "moved": moved, "problems": problems,
+                 "adopted": adopted, "sources_removed": removed, "problems": problems,
                  "move_sources": bool(a.move_sources)}
     write_json(sd / "batches" / (batch + ".json"), batch_obj)
     shutil.rmtree(staging, ignore_errors=True)
@@ -604,9 +600,10 @@ def cmd_adopt(a):
         code = 3
     emit({"schema": SCHEMA, "cmd": "adopt", "exit_code": code, "batch_id": batch,
           "session_id": plan.get("session_id"), "target_dir": str(target),
-          "summary": {"adopted": len(adopted), "moved_to_quarantine": len(moved),
-                      "problems": len(problems), "not_moved": len(movable) - len(moved)},
-          "adopted": adopted, "moved": moved, "problems": problems,
+          "summary": {"adopted": len(adopted), "sources_removed": len(removed),
+                      "sources_kept": len(movable) - len(removed),
+                      "problems": len(problems), "not_moved": len(movable) - len(removed)},
+          "adopted": adopted, "sources_removed": removed, "problems": problems,
           "rollback_cmd": "litadopt.py rollback --batch %s --workspace <workspace>" % batch,
           "ts": utc_now()})
 
@@ -677,7 +674,11 @@ def cmd_rollback(a):
         fail("rollback", 2, "缺少 --batch")
     ops = [o for o in read_ops(sd) if o.get("batch_id") == a.batch]
     restored, trashed, problems = [], [], []
+    # 默认模式已经把源删了：回滚要把工作区副本移回原路径（而不是丢进 .trash）
+    removed_map = {o["dst"]: o["src"] for o in ops if o.get("action") == "source_removed"}
     for o in reversed(ops):
+        if o.get("action") == "source_removed":
+            continue  # 与 adopted 同一条记录，统一在下面处理
         if o.get("action") == "moved":
             q, src = Path(o["quarantine"]), Path(o["src"])
             if not q.is_file():
@@ -691,12 +692,26 @@ def cmd_rollback(a):
                 problems.append({"quarantine": str(q), "result": "restore_failed:%s" % e})
         elif o.get("action") == "adopted":
             dst = Path(o["dst"])
-            if dst.is_file():
+            if not dst.is_file():
+                problems.append({"dst": str(dst), "result": "missing"})
+                continue
+            back = removed_map.get(str(dst))
+            if back:
+                sp = Path(back)
+                sp.parent.mkdir(parents=True, exist_ok=True)
+                if sp.exists():  # 原路径已被别的文件占用，不覆盖
+                    sp = sp.with_name(sp.stem + ".restored" + sp.suffix)
                 try:
-                    shutil.move(str(dst), str(sd / ".trash" / dst.name))
-                    trashed.append(str(dst))
+                    shutil.move(str(dst), str(sp))
+                    restored.append(str(sp))
                 except OSError as e:
-                    problems.append({"dst": str(dst), "result": "trash_failed:%s" % e})
+                    problems.append({"dst": str(dst), "result": "restore_failed:%s" % e})
+                continue
+            try:
+                shutil.move(str(dst), str(sd / ".trash" / dst.name))
+                trashed.append(str(dst))
+            except OSError as e:
+                problems.append({"dst": str(dst), "result": "trash_failed:%s" % e})
     log_op(sd, {"action": "rollback", "batch_id": a.batch,
                 "restored": len(restored), "trashed": len(trashed), "problems": len(problems)})
     emit({"schema": SCHEMA, "cmd": "rollback", "exit_code": 3 if problems else 0,
@@ -784,7 +799,10 @@ def build_parser():
     s = sub.add_parser("adopt", parents=[common])
     s.add_argument("--plan", required=True)
     s.add_argument("--source-map", help="JSON：原文件名或题名 -> 中文来源名")
-    s.add_argument("--move-sources", action="store_true", help="把源移到隔离区（可逆），需用户已授权")
+    s.add_argument("--keep-sources", action="store_true",
+                   help="把源文件留在下载目录（默认是：校验副本无误后，把本次 plan 内的源移入工作区）")
+    s.add_argument("--move-sources", action="store_true",
+                   help="[已废弃] 旧语义=移到隔离区；现在默认就会移走，此参数仅为兼容旧调用")
     s.add_argument("--dry-run", action="store_true")
     s.add_argument("--batch-size", type=int, default=10)
 

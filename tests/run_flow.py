@@ -96,9 +96,12 @@ def main():
             and all(a.get("name", "").startswith(("01_", "02_")) for a in out.get("adopted", [])),
             "exit=%d adopted=%s" % (rc, ad))
 
-        # 4) 源目录不动
-        chk("源目录保留全部文件", len(list(dl.glob("*.pdf"))) == 3,
-            "剩 %d 个" % len(list(dl.glob("*.pdf"))))
+        # 4) 默认：源被移入工作区，下载目录只剩基线文件（plan 外的文件一律不碰）
+        left = sorted(p.name for p in dl.glob("*.pdf"))
+        chk("默认移走源：下载目录只剩基线文件", left == ["preexisting.pdf"],
+            "剩 %d 个: %s" % (len(left), left))
+        chk("summary 报告移走 2 条", (out.get("summary") or {}).get("sources_removed") == 2,
+            "sources_removed=%s" % (out.get("summary") or {}).get("sources_removed"))
 
         rc, out = run(["verify", "--workspace", str(ws)])
         chk("verify 正常通过", rc == 0, "exit=%d" % rc)
@@ -110,8 +113,27 @@ def main():
         rc2, out2 = run(["verify", "--workspace", str(ws)])
         chk("rollback 后 verify 不得误报 missing", rc2 == 0,
             "exit=%d missing=%s" % (rc2, (out2.get("summary") or {}).get("missing")))
+        back = sorted(p.name for p in dl.glob("*.pdf"))
+        chk("rollback 把源文件放回下载目录",
+            back == ["Paper One - Zhang 2021.pdf", "Paper Two - Li 2019.pdf", "preexisting.pdf"],
+            "当前: %s" % back)
 
-        # 6) L1.5：未知刊名前缀必须给出跳过原因，且以非零退出（不许静默 0 目标）
+        # 6) --keep-sources：明确要求保留时才留在下载目录
+        dl2, ws2 = tmp / "dl2", tmp / "ws2"
+        dl2.mkdir(); ws2.mkdir()
+        mkpdf(dl2 / "preexisting2.pdf", "old2")
+        run(["init-baseline", "--workspace", str(ws2), "--root", str(dl2)])
+        mkpdf(dl2 / "Kept - Wang 2020.pdf", "kept one")
+        _, o2 = run(["scan-new", "--workspace", str(ws2), "--root", str(dl2),
+                     "--target-dir", str(ws2 / "文献" / "K"), "--settle", "0", "--allow-unconfirmed"])
+        rc, o3 = run(["adopt", "--plan", str(o2["plan"]), "--workspace", str(ws2),
+                      "--target-dir", str(ws2 / "文献" / "K"), "--keep-sources"])
+        names = sorted(p.name for p in dl2.glob("*.pdf"))
+        chk("--keep-sources 时源文件保留", "Kept - Wang 2020.pdf" in names, "当前: %s" % names)
+        chk("--keep-sources 仍然落盘", (o3.get("summary") or {}).get("adopted") == 1,
+            "adopted=%s exit=%d" % ((o3.get("summary") or {}).get("adopted"), rc))
+
+        # 7) L1.5：未知刊名前缀必须给出跳过原因，且以非零退出（不许静默 0 目标）
         csvp = tmp / "cn.csv"
         csvp.write_text("序号,题名,作者,来源,年份,DOI/标识,类别\n"
                         "1,测试,某,某学报,2021,10.99999/XYZ,C\n", encoding="utf-8")

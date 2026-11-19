@@ -10,7 +10,7 @@ display_name_en: Scholar Literature Fetcher
 description: 学术文献检索与全文获取：从主题或 DOI 出发，先宽泛发现拿标识符，再开放获取直取 PDF（魔数校验），中文先试期刊官网，需登录时才用用户自己的浏览器逐页操作，拿不到全文则回填题录与摘要；文件自动校验、去重、规范命名后归集到工作区。用于查文献、检索文献、搜论文、找文献、下载论文、文献综述、文献归集、导出题录、OA 全文、这篇能不能下，以及点名知网 CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar 时要检索或取全文。不适用于通用网页抓取、表单填写、站点测试、软件/视频/素材下载、商品社媒采集、专利与标准检索。
 description_zh: 五通道分层路由的文献获取：发现 → 中文期刊官网 → 开放获取直取 → 浏览器协作 → 摘要回填，自动归集。无登录态时仅 OA 通道可用，订阅刊给题录+摘要+链接。
 description_en: Five-channel literature workflow - discovery, Chinese journal sites, open-access fetch with magic-byte validation, browser-assisted retrieval, abstract backfill; auto-adopts into the workspace. Not for general scraping, form filling, or site QA.
-version: 3.5.4
+version: 3.6.0
 ---
 
 # 学术文献获取工作流（五通道分层路由）
@@ -116,7 +116,7 @@ python "<skill_dir>/scripts/oa_fetch.py" check --file "<path>"
 # 归集（scan-new 输出的 `plan` 字段就是下一步 --plan 的入参）
 python "<skill_dir>/scripts/litadopt.py" init-baseline --workspace "<workspace>" [--root "<下载目录>"]
 python "<skill_dir>/scripts/litadopt.py" scan-new --workspace "<workspace>" --target-dir "<workspace>/文献/<主题>" [--allow-unconfirmed]
-python "<skill_dir>/scripts/litadopt.py" adopt --plan <plan> --workspace "<workspace>" --target-dir "<workspace>/文献/<主题>" [--move-sources]
+python "<skill_dir>/scripts/litadopt.py" adopt --plan <plan> --workspace "<workspace>" --target-dir "<workspace>/文献/<主题>" [--keep-sources]
 python "<skill_dir>/scripts/litadopt.py" verify --workspace "<workspace>"
 python "<skill_dir>/scripts/litadopt.py" report --workspace "<workspace>" --format table
 ```
@@ -125,7 +125,7 @@ python "<skill_dir>/scripts/litadopt.py" report --workspace "<workspace>" --form
 
 - **`scan-new` 对 L2 直取 / 手工放入的文件默认判 `manual_drop`（`selected=0`）**——这类文件没有浏览器下载记录。核对确由本轮产生后加 `--allow-unconfirmed` 重扫，不要手改 plan。
 - **`adopt` 出现 `adopted=0` 且 `not_moved>0` 视为失败（退出码 3）**，不许当成功继续；`verify` 非 0、或 `report` 的会话不是本轮 `session_id`，同样按失败处理。
-- `--move-sources` 把本次新增移入隔离区（可逆、有日志、可 `rollback`），**仅当用户明确说过「默认下载目录不留」**才用。**格式优先级 PDF > CAJ > KDH**，按魔数判真实格式（后缀不可信），不为换格式反复重下（每次下载都计配额，间隔 ≥3–5 秒）。
+- **默认把本次下载的文献移入工作区**：先复制到目标、校验 MD5 一致后才删源；**plan 之外的文件一律不碰**。`--keep-sources` 才保留源文件。删源失败记 `source_kept:<原因>` 并退出 3（副本已在，源未删）。`rollback` 会把文件放回原路径。**格式优先级 PDF > CAJ > KDH**，按魔数判真实格式（后缀不可信），不为换格式反复重下（每次下载都计配额，间隔 ≥3–5 秒）。
 
 ## 7. 交付标准：每篇都要给出「能自己继续」的东西
 

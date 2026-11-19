@@ -61,7 +61,7 @@
 | 要验证某平台 SOP | `selftest.md` | 对应平台文件 |
 | 要批量拉一批 DOI / 导入 ZIP 或 RIS / 生成手动清单 | `commands.md` | — |
 | **要派子代理干检索/下载/归集** | `executor-brief.md` | 对应平台文件 |
-| `--move-sources` / 回滚 | `toolchain.md` §5 | — |
+| 归集移走源 / 回滚 | `toolchain.md` §5 | — |
 
 ## 平台 → 文件映射
 

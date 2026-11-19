@@ -132,6 +132,21 @@ cases:
     desc: SKILL.md 需说明 meta 的 ok 只代表题录可取
     tokens: ["`fulltext`"]
 
+  # ---------- M. 默认移走源（下载目录不留残） ----------
+  - id: M01
+    kind: contract_token
+    desc: SKILL.md 必须写明默认移入工作区、且 plan 外文件不碰
+    tokens: ["默认把本次下载的文献移入工作区", "plan 之外的文件一律不碰"]
+  - id: M02
+    kind: contract_token
+    desc: 必须给出保留源的开关
+    tokens: ["--keep-sources"]
+  - id: M03
+    kind: source_token
+    file: scripts/litadopt.py
+    desc: adopt 必须先有校验通过的副本才删源，且只处理 src_map 里的条目
+    tokens: ["src.unlink()", "source_kept:no_verified_copy", "src_map.get(str(src))"]
+
   # ---------- H. 机构订阅通道的文件格式（知网/万方给 KDH/CAJ） ----------
   - id: H01
     kind: check_format
