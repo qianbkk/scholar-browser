@@ -891,8 +891,17 @@ def check_file(path):
         tail = f.read()
     rec["magic"] = head[:8].decode("latin-1", "replace")
     if not head.startswith(PDF_MAGIC):
+        # 机构订阅主通道（知网/万方）给的是 KDH / CAJ 私有格式，且常被写成 .caj 后缀
+        fmt = "kdh" if head.startswith(b"KDH") else ("caj" if (head.startswith(b"CAJ") or head.startswith(b"HZ ")) else None)
+        if fmt:
+            rec["format"] = fmt
+            rec["requires_reader"] = "CAJViewer/E-Study"
+            rec["valid"] = rec["size"] >= 10240
+            rec["reason"] = "" if rec["valid"] else "too_small_%d" % rec["size"]
+            return rec
         rec["reason"] = "not_pdf_magic"
         return rec
+    rec["format"] = "pdf"
     rec["end_marker"] = b"%%EOF" in tail
     rec["page_estimate"] = tail.count(b"/Type /Page") + tail.count(b"/Type/Page")
     h = hashlib.sha256()

@@ -19,6 +19,7 @@ import json
 import pathlib
 import re
 import sys
+import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SKILL = ROOT / "SKILL.md"
@@ -230,8 +231,21 @@ def run(cases, only=None):
             n = SKILL.stat().st_size
             add(cid, kind, n <= c["max_bytes"], "当前 %d 字节 / 上限 %d" % (n, c["max_bytes"]))
 
+        elif kind == "check_format":
+            # 真行为：写到临时文件再调 check_file()，看私有格式是否被判"有效但需阅读器"
+            mod = load_oa()
+            head = c["head"].encode("utf-8")
+            tmp = pathlib.Path(tempfile.gettempdir()) / "check_fmt_sample.bin"
+            tmp.write_bytes(head + b"\0" * max(0, 12000 - len(head)))
+            r = mod.check_file(str(tmp))
+            want = bool(c.get("expect_valid"))
+            okk = bool(r.get("valid")) == want
+            if want and c.get("expect_format"):
+                okk = okk and r.get("format") == c["expect_format"]
+            add(cid, kind, okk, "valid=%s format=%s reason=%s"
+                % (r.get("valid"), r.get("format"), r.get("reason")))
+
         elif kind == "no_crlf":
-            # Windows 脚本写文件会把 LF 静默变 CRLF，字节数凭空 +行数，F03 会假性逼近上限
             bad = []
             for name in c["files"]:
                 b = (ROOT / name).read_bytes()

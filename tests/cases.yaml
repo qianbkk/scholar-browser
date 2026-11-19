@@ -132,6 +132,19 @@ cases:
     desc: SKILL.md 需说明 meta 的 ok 只代表题录可取
     tokens: ["`fulltext`"]
 
+  # ---------- H. 机构订阅通道的文件格式（知网/万方给 KDH/CAJ） ----------
+  - id: H01
+    kind: check_format
+    desc: 机构订阅给的 KDH 必须判"有效但需阅读器"，不能一律 not_pdf_magic
+    head: "KDH 2.00 Copyright (c) CNKI"
+    expect_valid: true
+    expect_format: kdh
+  - id: H02
+    kind: check_format
+    desc: 后缀改成 .caj 的 HTML 仍必须判失败（魔数不信后缀）
+    head: "<html>not a pdf</html>"
+    expect_valid: false
+
   # ---------- F. 触发面（description 语义锚点） ----------
   - id: F01
     kind: description_has
