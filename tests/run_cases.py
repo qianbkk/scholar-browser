@@ -230,6 +230,15 @@ def run(cases, only=None):
             n = SKILL.stat().st_size
             add(cid, kind, n <= c["max_bytes"], "当前 %d 字节 / 上限 %d" % (n, c["max_bytes"]))
 
+        elif kind == "no_crlf":
+            # Windows 脚本写文件会把 LF 静默变 CRLF，字节数凭空 +行数，F03 会假性逼近上限
+            bad = []
+            for name in c["files"]:
+                b = (ROOT / name).read_bytes()
+                if b"\r\n" in b:
+                    bad.append("%s(%d)" % (name, b.count(b"\r\n")))
+            add(cid, kind, not bad, "含 CRLF: %s" % bad if bad else "全部为 LF")
+
         else:
             add(cid, kind, False, "未知用例类型")
 

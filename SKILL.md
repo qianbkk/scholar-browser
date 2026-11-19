@@ -7,10 +7,10 @@ license: MIT
 agent_created: true
 display_name: 学术文献获取
 display_name_en: Scholar Literature Fetcher
-description: 学术文献检索与获取：从主题或 DOI 出发，先宽泛发现拿标识符，再开放获取直取 PDF（魔数校验），中文先试期刊官网，需登录时才用你自己的浏览器逐页操作，拿不到全文则回填题录与摘要；文件自动校验、去重、规范命名后归集到工作区。覆盖知网 CNKI、万方、维普、Google Scholar、Web of Science、PubMed/PMC、arXiv、ScienceDirect。**强触发**（单独出现即触发）：查文献、检索文献、搜论文、找文献、下载论文、下载文献、文献综述、文献归集、导出题录、OA 全文、浏览器取全文、这篇能不能下。**弱触发**（须与「文献/论文/期刊/全文/DOI」同句共现）：知网、CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar、高级检索、检索式、已登录浏览器。**不适用于**通用网页抓取、表单填写、站点测试、软件/视频/素材下载、商品社媒采集、专利与标准检索。
+description: 学术文献检索与全文获取：从主题或 DOI 出发，先宽泛发现拿标识符，再开放获取直取 PDF（魔数校验），中文先试期刊官网，需登录时才用用户自己的浏览器逐页操作，拿不到全文则回填题录与摘要；文件自动校验、去重、规范命名后归集到工作区。用于查文献、检索文献、搜论文、找文献、下载论文、文献综述、文献归集、导出题录、OA 全文、这篇能不能下，以及点名知网 CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar 时要检索或取全文。不适用于通用网页抓取、表单填写、站点测试、软件/视频/素材下载、商品社媒采集、专利与标准检索。
 description_zh: 五通道分层路由的文献获取：发现 → 中文期刊官网 → 开放获取直取 → 浏览器协作 → 摘要回填，自动归集。无登录态时仅 OA 通道可用，订阅刊给题录+摘要+链接。
 description_en: Five-channel literature workflow - discovery, Chinese journal sites, open-access fetch with magic-byte validation, browser-assisted retrieval, abstract backfill; auto-adopts into the workspace. Not for general scraping, form filling, or site QA.
-version: 3.5.2
+version: 3.5.3
 ---
 
 # 学术文献获取工作流（五通道分层路由）
@@ -57,21 +57,17 @@ version: 3.5.2
 
 顶层 `reason`：**单候选失败时就是该候选的真实原因**；**多候选全失败时才是 `no_candidate_passed`**，此时必须读 `reasons[]` / `attempts[].reason` 分流。
 
-| reason | 含义 | 下一步 | 可重试 |
+| 分组 | reason | 下一步 | 可重试 |
 |---|---|---|---|
-| `ok` | 通过闸门 | 完成，记 `via` | — |
-| `html_landing` | 返回网页 | 换候选；耗尽 → L3 | 不重试 |
-| `cloudflare_challenge` | JS 挑战页 | 直接 L3（真实浏览器常自动过） | 不重试 |
-| `captcha` | 人机校验 | **停机**标「需人工」 | 不重试 |
-| `login_wall` / `need_auth` | 登录页 / 401 | L3 | 不重试 |
-| `paywall_landing` | 订阅页 | 有机构权限 → L3；无权限转正规渠道 | 不重试 |
-| `forbidden_403` | 拒绝访问 | 停该条目记「需人工」 | **不重试** |
-| `rate_limited_429` | 限流 | 退避一次再试；仍 429 → 停 | **1 次** |
-| `not_found_404` / `server_error_*` | 失效 / 服务异常 | 换候选 | 不重试 |
-| `not_pdf` / `not_pdf_octet` / `not_pdf_magic` / `json_error_body` | 拿到的不是 PDF | 换候选 | 不重试 |
-| `too_large` / `partial_suffix` / `truncated_no_eof` / `size_mismatch` / `missing` | 文件不完整 | 重下一次；仍坏 → 换源 | **1 次** |
-| `network_error:*` | 连接层（含 TLS 证书） | 换候选；全失败 → L3。证书错多为代理中间人，提示用户关代理，**不要自己关校验** | 不重试 |
-| `no_candidate` / `no_candidate_passed` | 无 OA 位置 / 有候选全失败 | 前者直接 L3；后者**回头读 `reasons[]`** 按上表分流 | — |
+| 通过 | `ok` | 完成，记 `via` | — |
+| 页面不是 PDF | `html_landing` `not_found_404` `server_error_*` `not_pdf` `not_pdf_octet` `not_pdf_magic` `json_error_body` | 换候选；耗尽 → L3 | 不重试 |
+| 要交互 | `cloudflare_challenge` `login_wall` `need_auth` `paywall_landing` | L3（真实浏览器可解；`paywall_landing` 无机构权限转正规渠道） | 不重试 |
+| 硬停 | `captcha` `forbidden_403` | **停机**标「需人工」 | **不重试** |
+| 限流 / 残缺 | `rate_limited_429`；`too_large` `partial_suffix` `truncated_no_eof` `size_mismatch` `missing` | 429 退避一次；残缺重下一次；仍失败换源 | **各 1 次** |
+| 连接层 | `network_error:*` | 换候选；全失败 → L3。证书错多为代理中间人，提示用户关代理，**不要自己关校验** | 不重试 |
+| 无候选 | `no_candidate` / `no_candidate_passed` | 前者直接 L3；后者**回头读 `reasons[]`** | — |
+
+**这张表只回答"接下来做什么"**；各码的判定阈值与含义见 `discovery.md` §3.2，不在此重复。
 
 ## 3. 平台速查（细节在 `platforms-*.md`）
 
@@ -86,11 +82,16 @@ version: 3.5.2
 5. **不误伤文件、不编造**：只处理本轮基线后新增 + 白名单 + 魔数通过的文件；没实测的文案/字段/URL 标「待实测」。
 6. **浏览器需授权才启动**：用户说「启动我的浏览器 / 用浏览器下载 / 可以启动」时才启动；不 taskkill、不反复重启。**未获授权按 §10 交付，不得擅自开**。
 
-## 5. 流水线
+## 5. 流水线（照抄勾选，别跳步）
 
-`init-baseline`（下载前必做，目录非系统默认时加 `--root`）→ **B 发现**（L1，`discovery.md` §2）→ **C 直取**（`fetch`，过闸门才落盘）→ **D 浏览器**（L3 逐篇单击）→ **E 归集**（`scan-new`→`adopt`→`verify`→`report`）→ **F 清场**（只关本轮新增页）。
+- [ ] 1 `init-baseline`（下载目录非系统默认时加 `--root`）
+- [ ] 2 只有主题时先走 L1 拿标识符；已有 DOI 直接跳第 3 步
+- [ ] 3 `fetch` 直取，**过魔数闸门才落盘**
+- [ ] 4 要交互才进 L3，开页前先存标签基线（`runtime.md` §1，必须 `type: "extension"`）
+- [ ] 5 归集 `scan-new` → `adopt` → `verify`
+- [ ] 6 清场：只关本轮新增页，用户原有页不动
 
-开浏览器前先按 `runtime.md` §1 存基线再开新页（必须 `type: "extension"`）；顺序反了，收尾分不清哪些页是我开的。
+**每步做完先校验再往下走**：`check` / `verify` 非 0 就回上一步修，不许带着失败继续。
 
 ## 6. 常用命令
 
@@ -148,7 +149,7 @@ python "<skill_dir>/scripts/litadopt.py" report --workspace "<workspace>" --form
 
 | 想做的事 | 读 |
 |---|---|
-| 判断能不能直下、要不要开浏览器 | `discovery.md` |
+| 判断能不能直取、要不要开浏览器 | `discovery.md` |
 | 拿中文期刊真 PDF / 补中文摘要 | `platforms-cn-journal.md`、`abstract-recovery.md` |
 | 开浏览器（基线、清场、代理、邮箱） | `runtime.md` |
 | 归集报错 / 回滚 | `toolchain.md` §4–§5 |
@@ -157,7 +158,7 @@ python "<skill_dir>/scripts/litadopt.py" report --workspace "<workspace>" --form
 
 ## 9. 已知限制
 
-- **L2 单篇时间预算 90 秒**：慢网下 `fetch` 可能长时间无输出（实测单篇 254 秒）。用外层超时 90 秒包住，超时记 `network_error:timeout` 并降级，**别把卡住当成还在跑**。
+- **L2 单篇时间预算 90 秒**：`fetch` 在慢链路或大文件上可能长时间无输出（与带宽无关，实测同一文件独占 1.2 秒）。外层超时 90 秒包住，超时记 `network_error:timeout` 并降级，**别把卡住当成还在跑**。
 - **订阅型单篇 PDF 不能自动写盘**（进阅读器 → 系统另存为）→ 走 SD 批量 ZIP（`sd-batch.md`），失败最多重试一次。无 CAJViewer / caj2pdf → 真 CAJ 转不了；知网可能给 **KDH**，需官方阅读器。
 - **摘要多是"渲染后才有"**：直接请求 ScienceDirect 被 403，部分站点 WAF 连渲染也过不去，只能交用户点一次。OA 站点也可能因 TLS 指纹被拒——L2 固有上限，不是 bug。
 - `mcp__browser__*` 无下载管理与读本地文件能力，下载靠点击、文件侧交脚本。**浏览器段仅适配 WorkBuddy**。

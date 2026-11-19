@@ -145,3 +145,7 @@ cases:
     kind: skill_md_max
     desc: SKILL.md 不超过 15360 字节
     max_bytes: 15360
+  - id: F04
+    kind: no_crlf
+    desc: 文本文件必须为 LF；Windows 写盘会把 LF 变 CRLF，导致字节数假性膨胀（实测 +179）
+    files: ["SKILL.md", "README.md", "references/CHANGELOG.md", "tests/cases.yaml"]
