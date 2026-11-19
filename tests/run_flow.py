@@ -133,7 +133,24 @@ def main():
         chk("--keep-sources 仍然落盘", (o3.get("summary") or {}).get("adopted") == 1,
             "adopted=%s exit=%d" % ((o3.get("summary") or {}).get("adopted"), rc))
 
-        # 7) L1.5：未知刊名前缀必须给出跳过原因，且以非零退出（不许静默 0 目标）
+        # 7) 重复下载（内容已在库）也必须清走源，不能留在下载目录
+        dl3, ws3 = tmp / "dl3", tmp / "ws3"
+        dl3.mkdir(); ws3.mkdir()
+        run(["init-baseline", "--workspace", str(ws3), "--root", str(dl3)])
+        mkpdf(dl3 / "Dup One.pdf", "dup content")
+        _, a1 = run(["scan-new", "--workspace", str(ws3), "--root", str(dl3),
+                     "--target-dir", str(ws3 / "文献" / "D"), "--settle", "0", "--allow-unconfirmed"])
+        run(["adopt", "--plan", str(a1["plan"]), "--workspace", str(ws3),
+             "--target-dir", str(ws3 / "文献" / "D")])
+        mkpdf(dl3 / "Dup One again.pdf", "dup content")  # 同内容 → 判 duplicate
+        _, a2 = run(["scan-new", "--workspace", str(ws3), "--root", str(dl3),
+                     "--target-dir", str(ws3 / "文献" / "D"), "--settle", "0", "--allow-unconfirmed"])
+        run(["adopt", "--plan", str(a2["plan"]), "--workspace", str(ws3),
+             "--target-dir", str(ws3 / "文献" / "D")])
+        chk("重复下载的文件也清走源", not (dl3 / "Dup One again.pdf").exists(),
+            "剩余: %s" % [p.name for p in dl3.iterdir()])
+
+        # 8) L1.5：未知刊名前缀必须给出跳过原因，且以非零退出（不许静默 0 目标）
         csvp = tmp / "cn.csv"
         csvp.write_text("序号,题名,作者,来源,年份,DOI/标识,类别\n"
                         "1,测试,某,某学报,2021,10.99999/XYZ,C\n", encoding="utf-8")

@@ -572,11 +572,18 @@ def cmd_adopt(a):
     if a.move_sources:
         for it in movable:
             src = Path(it["src"])
+            if not src.is_file():
+                continue  # 源已不在（上一轮已移走）：幂等跳过，不算失败
             name = src_map.get(str(src))
-            if not name:
-                continue  # 未被本次处理（无对应落盘），不碰
-            dst = target / name
-            if not dst.is_file() or md5sum(dst) != it["md5"]:
+            if name:
+                dst = target / name
+            else:
+                # 本次判为 duplicate（目标里已有同内容，未新建副本）：按 md5 找那份
+                same = seen_md5.get(it["md5"]) or []
+                dst = (target / same[0]) if same else None
+            if not dst or not dst.is_file() or md5sum(dst) != it["md5"]:
+                if not name:
+                    continue  # 本次没处理过、库里也没有可核对副本 → 一律不动
                 problems.append({"src": str(src), "result": "source_kept:no_verified_copy"})
                 continue
             try:
@@ -596,13 +603,17 @@ def cmd_adopt(a):
     write_json(sd / "batches" / (batch + ".json"), batch_obj)
     shutil.rmtree(staging, ignore_errors=True)
     code = 4 if any(p["result"] == "verify_failed" for p in problems) else (3 if problems else 0)
-    if code == 0 and not adopted and movable:  # 有目标却一条都没落位 = 失败，不许静默成功
+    # 只有「本次真有待归集的新条目却一条都没落位」才算失败；
+    # already_adopted / duplicate 的批次即使 adopted=0 也是正常（它只是来清源）。
+    pending_new = [i for i in movable if i.get("status") == "new"]
+    if code == 0 and not adopted and pending_new:
         code = 3
     emit({"schema": SCHEMA, "cmd": "adopt", "exit_code": code, "batch_id": batch,
           "session_id": plan.get("session_id"), "target_dir": str(target),
           "summary": {"adopted": len(adopted), "sources_removed": len(removed),
-                      "sources_kept": len(movable) - len(removed),
-                      "problems": len(problems), "not_moved": len(movable) - len(removed)},
+                      "sources_kept": sum(1 for i in movable if Path(i["src"]).is_file()),
+                      "problems": len(problems),
+                      "not_moved": sum(1 for i in movable if Path(i["src"]).is_file())},
           "adopted": adopted, "sources_removed": removed, "problems": problems,
           "rollback_cmd": "litadopt.py rollback --batch %s --workspace <workspace>" % batch,
           "ts": utc_now()})
