@@ -107,6 +107,19 @@ def jout(obj, code=0):
     return code
 
 
+def _top_reason(reasons):
+    """顶层 reason：单候选失败时直接给出该候选的原因，多候选才用 no_candidate_passed。
+
+    否则调用方拿到 `no_candidate_passed` 无法判断该停机还是该转 L3（2026-11-18 实测踩过）。
+    """
+    rs = [r for r in (reasons or []) if r]
+    if not rs:
+        return "no_candidate"
+    if len(rs) == 1:
+        return rs[0]
+    return "no_candidate_passed"
+
+
 def ua(email):
     return UA_TMPL.format(email=email) if email else DEFAULT_UA
 
@@ -626,6 +639,9 @@ def meta_record(doi, email=None):
         )
 
     rec["ok"] = bool(R["title"] or rec["links"])
+    # meta 从不取全文：ok 只代表"题录可取"。全文状态必须单独给，否则调用方会把 ok:true 当"拿到了全文"
+    rec["fulltext"] = False
+    rec["deliverable"] = "metadata_only"
     return rec
 
 
@@ -655,6 +671,7 @@ def meta_markdown(rec):
         out.append("- 可打开链接：")
         for L in rec["links"]:
             out.append("  - [%s] %s" % (L["label"], L["url"]))
+    out.append("- 全文：**未获取**（本条只给题录 + 摘要 + 链接；`fulltext=false`）")
     return "\n".join(out)
 
 
@@ -1289,7 +1306,7 @@ def main():
 
     reasons = [x.get("reason") for x in attempts]
     return jout(
-        {"ok": False, "doi": doi, "reason": "no_candidate_passed", "attempts": attempts,
+        {"ok": False, "doi": doi, "reason": _top_reason(reasons), "attempts": attempts,
          "sources": src if doi else {}, "elapsed_s": round(time.time() - t0, 2),
          "reasons": reasons},
         3,

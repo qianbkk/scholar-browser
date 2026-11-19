@@ -1,0 +1,147 @@
+# 行为级回归用例（声明式）——锁住三个核心决策 + 交付契约
+# 运行：python tests/run_cases.py            （全跑，打印 PASS/FAIL 与阈值）
+#       python tests/run_cases.py --only reason   （只跑某组）
+# 说明：reason_classify 组直接调用 scripts/oa_fetch.py 的 _sniff()，测的是**真实分类行为**；
+#      contract 组断言文档里的决议表是否与脚本实际产出的 reason 集合一致（防文档漂移）。
+meta:
+  version: 1
+  block_threshold: 0   # 失败数 > 阈值即非零退出（CI 用它 block）
+
+cases:
+  # ---------- A. reason 分类（真行为：喂响应特征，看分类结果） ----------
+  - id: A01
+    kind: reason_classify
+    desc: 正常 PDF 魔数
+    input: {status: 200, ctype: "application/pdf", head: "%PDF-1.7 ..."}
+    expect: ok
+  - id: A02
+    kind: reason_classify
+    desc: 403 且带 Cloudflare 挑战特征
+    input: {status: 403, ctype: "text/html", head: "<html><title>Just a moment...</title>"}
+    expect: cloudflare_challenge
+  - id: A03
+    kind: reason_classify
+    desc: 403 无挑战特征
+    input: {status: 403, ctype: "text/html", head: "<html>Forbidden</html>"}
+    expect: forbidden_403
+  - id: A04
+    kind: reason_classify
+    desc: 429 限流
+    input: {status: 429, ctype: "text/html", head: "<html>slow down</html>"}
+    expect: rate_limited_429
+  - id: A05
+    kind: reason_classify
+    desc: 200 但正文是登录页
+    input: {status: 200, ctype: "text/html", head: "<html><body>Please sign in to continue</body></html>"}
+    expect: login_wall
+  - id: A06
+    kind: reason_classify
+    desc: 200 订阅页
+    input: {status: 200, ctype: "text/html", head: "<html><a>Get Access</a> or purchase this article</html>"}
+    expect: paywall_landing
+  - id: A07
+    kind: reason_classify
+    desc: 200 普通落地页
+    input: {status: 200, ctype: "text/html", head: "<html><h1>Article abstract</h1></html>"}
+    expect: html_landing
+  - id: A08
+    kind: reason_classify
+    desc: 200 人机校验
+    input: {status: 200, ctype: "text/html", head: "<html>captcha required</html>"}
+    expect: captcha
+  - id: A09
+    kind: reason_classify
+    desc: 401 需认证
+    input: {status: 401, ctype: "application/json", head: "{}"}
+    expect: need_auth
+  - id: A10
+    kind: reason_classify
+    desc: 404 链接失效
+    input: {status: 404, ctype: "text/html", head: "<html>not found</html>"}
+    expect: not_found_404
+  - id: A11
+    kind: reason_classify
+    desc: 5xx 服务异常
+    input: {status: 503, ctype: "text/html", head: "<html>busy</html>"}
+    expect: server_error_503
+  - id: A12
+    kind: reason_classify
+    desc: octet-stream 但不是 PDF
+    input: {status: 200, ctype: "application/octet-stream", head: "MZ\x90\x00binary"}
+    expect: not_pdf_octet
+
+  # ---------- B. 决议表覆盖合同（防文档与脚本漂移） ----------
+  - id: A13
+    kind: top_reason
+    desc: 单候选失败时顶层 reason 必须直接给出该候选原因
+    input: {reasons: "captcha"}
+    expect: captcha
+  - id: A14
+    kind: top_reason
+    desc: 多候选全失败时顶层才用 no_candidate_passed
+    input: {reasons: "captcha|html_landing"}
+    expect: no_candidate_passed
+
+  - id: B01
+    kind: taxonomy_coverage
+    desc: 脚本能产出的每个 reason 都必须在 SKILL.md 的 reason 表中出现
+    # 否则执行者拿着顶层 reason 找不到分流规则
+  - id: B02
+    kind: taxonomy_toplevel
+    desc: 顶层 reason（含 no_candidate_passed / no_candidate）必须可分流
+    must_include: ["no_candidate_passed", "no_candidate"]
+
+  # ---------- C. L3 可用性降级（确定性出口） ----------
+  - id: C01
+    kind: degraded_signal
+    desc: SKILL.md 必须定义 L3 不可用时的固定降级信号
+    token: degraded_to_l1_6
+  - id: C02
+    kind: degraded_signal_shape
+    desc: 该信号必须有字段名 + 取值 + 触发条件三要素
+    tokens: ["degraded_to_l1_6", "true"]
+
+  # ---------- D. L1.5 中文官网优先级 ----------
+  - id: D01
+    kind: cn_priority_order
+    desc: 判定顺序必须为 官网(L1.5) → 万方 → 知网
+    order: ["L1.5", "万方", "知网"]
+  - id: D02
+    kind: cn_skip_l2
+    desc: 知网/万方/维普 必须跳过 L2 直 L3
+    tokens: ["知网", "跳过 L2"]
+
+  # ---------- E. 交付契约（实测发现的静默空转） ----------
+  - id: E01
+    kind: contract_token
+    desc: scan-new 处理 L2 直取文件必须提到 --allow-unconfirmed
+    tokens: ["--allow-unconfirmed"]
+  - id: E02
+    kind: contract_token
+    desc: 必须把 adopted=0 判为失败，不得当成功
+    tokens: ["adopted=0"]
+
+  # ---------- G. meta 语义（ok:true ≠ 拿到全文） ----------
+  - id: G01
+    kind: source_token
+    desc: meta 必须显式标注"不取全文"，避免 ok:true 被误读成"拿到了"
+    file: scripts/oa_fetch.py
+    tokens: ['rec["fulltext"] = False', 'rec["deliverable"] = "metadata_only"', 'fulltext=false']
+  - id: G02
+    kind: contract_token
+    desc: SKILL.md 需说明 meta 的 ok 只代表题录可取
+    tokens: ["`fulltext`"]
+
+  # ---------- F. 触发面（description 语义锚点） ----------
+  - id: F01
+    kind: description_has
+    desc: description 必须保留核心触发锚点
+    anchors: ["文献", "全文", "DOI", "知网", "论文"]
+  - id: F02
+    kind: description_max
+    desc: description 精简后不超过 600 字符（常驻开销）
+    max_chars: 600
+  - id: F03
+    kind: skill_md_max
+    desc: SKILL.md 不超过 15360 字节
+    max_bytes: 15360

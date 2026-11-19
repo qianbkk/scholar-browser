@@ -30,6 +30,7 @@
 | `triage.md` | 文献价值分级**内置模板**（A/B/C/D + 关键词翻译法），不含任何具体课题 | 检索回来一堆结果、要决定下哪些/读哪些 |
 | `selftest.md` | 子代理自测协议（含 L2 验证）+ 回报 JSON | 要验证或迭代某平台 SOP |
 | `executor-brief.md` | **派子代理的指令模板**：硬预算、四条死法、停机条件、回报结构、验收清单 | 每次要派执行者做检索/下载/归集 |
+| `commands.md` | 批量与专项命令（`batch` / `fetch_cn_journal` / `checklist` / `sd_zip` / `ris_meta`）及各自的退出码 | 要批量拉、走中文官网、生成手动清单、导入 ZIP/RIS |
 | `scripts/fetch_cn_journal.py` | L1.5：中文期刊 DOI → 官网真 PDF（按刊名前缀路由 + 多候选 + 魔数校验 + JSON 结果表） | 由 SKILL.md 命令直接调用，不需阅读理解 |
 | `scripts/oa_fetch.py` | L1：`search` 关键词检索 / `cite` 引文滚雪球；L2：`meta` 元数据兜底 / `resolve`+`fetch` 单篇直取 / `batch` 批量直取 / `checklist` 生成手动另存清单 / `check` 文件校验 / `config` 配置诊断 | 由 SKILL.md 命令直接调用，不需阅读理解 |
 | `scripts/sd_zip.py` | ScienceDirect 批量下载 ZIP 导入：解压 + 魔数校验 + MD5 去重 + `NN_` 编号落位 | 由 SKILL.md 命令直接调用，不需阅读理解 |
@@ -58,6 +59,7 @@
 | 跑了下载但目录没文件 | 对应平台 `download` 段 | `toolchain.md` §4 |
 | 登录态信号 / 人机校验 / 403 / 429 | `limits.md` §2 | — |
 | 要验证某平台 SOP | `selftest.md` | 对应平台文件 |
+| 要批量拉一批 DOI / 导入 ZIP 或 RIS / 生成手动清单 | `commands.md` | — |
 | **要派子代理干检索/下载/归集** | `executor-brief.md` | 对应平台文件 |
 | `--move-sources` / 回滚 | `toolchain.md` §5 | — |
 
@@ -98,7 +100,12 @@ scholar-browser/
 │   ├── platforms-global.md  ┘
 │   ├── triage.md            ← 分级**内置模板**（个人定制放 ~/.scholar-browser/triage.md）
 │   ├── selftest.md          ← 平台 SOP 自测协议
-│   └── executor-brief.md    ← 派子代理的指令模板
+│   ├── executor-brief.md    ← 派子代理的指令模板
+│   └── commands.md          ← 批量与专项命令
+├── tests/                   ← 行为级回归（不属于运行时依赖）
+│   ├── cases.yaml           ← 声明式用例：reason 分类 / 降级出口 / 中文优先级 / 交付契约
+│   ├── run_cases.py         ← 用例执行器（--only 选组；退出码即结论）
+│   └── run_flow.py          ← 交付链行为测试（沙箱内 scan-new→adopt→verify→rollback）
 └── scripts/                 ← 零依赖 CLI（仅 Python 标准库），由 SKILL.md 直接调用
     ├── oa_fetch.py          ← L1 检索 / L2 直取 / meta / batch / checklist / check
     ├── fetch_cn_journal.py  ← L1.5 中文期刊官网真 PDF

@@ -36,7 +36,14 @@ def utc_now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+LAST_CODE = {"code": 0}  # main() 用它把 exit_code 传回 shell
+
+
 def emit(obj, pretty=False):
+    try:
+        LAST_CODE["code"] = int(obj.get("exit_code") or 0)
+    except (TypeError, ValueError):
+        LAST_CODE["code"] = 0
     text = json.dumps(obj, ensure_ascii=False,
                       indent=2 if pretty else None,
                       separators=None if pretty else (",", ":"))
@@ -593,6 +600,8 @@ def cmd_adopt(a):
     write_json(sd / "batches" / (batch + ".json"), batch_obj)
     shutil.rmtree(staging, ignore_errors=True)
     code = 4 if any(p["result"] == "verify_failed" for p in problems) else (3 if problems else 0)
+    if code == 0 and not adopted and movable:  # 有目标却一条都没落位 = 失败，不许静默成功
+        code = 3
     emit({"schema": SCHEMA, "cmd": "adopt", "exit_code": code, "batch_id": batch,
           "session_id": plan.get("session_id"), "target_dir": str(target),
           "summary": {"adopted": len(adopted), "moved_to_quarantine": len(moved),
@@ -602,10 +611,27 @@ def cmd_adopt(a):
           "ts": utc_now()})
 
 
+def _rolled_back_dsts(sd):
+    """已回滚批次里被 trash 掉的 dst；verify 不该把它们算成 missing。"""
+    out = set()
+    for o in read_ops(sd):
+        if o.get("action") != "rollback" or not o.get("batch_id"):
+            continue
+        try:
+            b = json.loads((sd / "batches" / (o["batch_id"] + ".json")).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for ad in b.get("adopted", []):
+            if ad.get("dst"):
+                out.add(ad["dst"])
+    return out
+
+
 def cmd_verify(a):
     sd = state_dir_for(a.workspace, a.state_dir)
     ops = read_ops(sd)
-    adopted = [o for o in ops if o.get("action") == "adopted"]
+    rolled_back = _rolled_back_dsts(sd)
+    adopted = [o for o in ops if o.get("action") == "adopted" and o.get("dst") not in rolled_back]
     seen, missing, mismatch = {}, [], []
     for o in adopted:
         dst = Path(o["dst"])
@@ -792,7 +818,8 @@ def main():
             raise
         except Exception as e:
             fail(a.cmd, 1, "%s: %s" % (type(e).__name__, e))
+    return LAST_CODE["code"]
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)

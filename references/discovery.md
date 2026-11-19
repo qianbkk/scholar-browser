@@ -18,7 +18,7 @@
 | `10.7717/peerj.4375` | gold | 失败 | PMC `/pdf/` 返回 HTML；doi.org→peerj 被站点 403 |
 | `10.1038/nature14539` | green | 失败 | `citation_pdf_url` 指向文章页；OA url 连接失败 |
 
-**结论：3 个里 1 个能直取（33%），与第三方 123-DOI 实测 33%/39% 同量级【联·二手】。**
+**结论：3 个里 1 个能直取。这是 n=3 的小样本，只能当量级参考，不能当稳定预期**（2026-11-18 复测仍是 3 中 1，但两次都是同一篇 arXiv 成功；第三方 123-DOI 的 33%/39% 属【联·二手】，与本次小样本的对应关系是**待验证假设**，不是结论）。
 
 **开代理后复测（2026-11-13，`--proxy http://127.0.0.1:<用户端口>`）：结果没变，仍是 1/3。**
 - PeerJ：PMC 路径从 `html_landing` 变成 **`captcha`**（要求人机校验），doi.org→peerj 仍记为 `cloudflare_challenge`
@@ -147,6 +147,8 @@ python "<skill_dir>/scripts/oa_fetch.py" check --file "<path>"
 
 ### 3.2 reason 码 → 下一步做什么
 
+**先读对字段**：`fetch`/`batch` 的**顶层 `reason`**——**单候选失败时就是该候选的真实原因**；**多候选全失败时才是 `no_candidate_passed`**，此时真正的分流依据在同一次输出的 `reasons[]` 或 `attempts[].reason`（2026-11-18 实测：3 个 DOI 里 2 个是多候失败，顶层 `no_candidate_passed`，实际原因是 `captcha` 与 `network_error:SSLEOFError`；3.5.2 起单候选不再被合并）。
+
 | reason | 含义 | 动作 |
 |---|---|---|
 | `ok` | 通过 | 完成，记录 `via` |
@@ -154,13 +156,16 @@ python "<skill_dir>/scripts/oa_fetch.py" check --file "<path>"
 | `cloudflare_challenge` | JS 挑战（"Just a moment"） | **直接 L3**，不要重试 |
 | `captcha` | 要求人机校验 | 停，交人工 |
 | `login_wall` | 登录页 | L3（用户登录态可解） |
-| `paywall_landing` | 订阅页 | L3（机构权限可解）或转正规渠道 |
-| `forbidden_403` / `rate_limited_429` | 拒绝/限流 | 429 退避一次；持续 → L3 |
+| `paywall_landing` | 订阅页 | 有权限 → L3；无权限 → 转正规渠道 |
+| `forbidden_403` | 拒绝 | 停该条目，记「需人工」，**不重试** |
+| `rate_limited_429` | 限流 | 退避一次；仍 429 → L3 或停 |
 | `need_auth` | 401 | L3 |
-| `not_found_404` / `server_error_*` | 链接失效/服务异常 | 换候选 |
-| `too_small_*` / `truncated_no_eof` / `size_mismatch` | 下载不完整 | 重新下，或换源 |
+| `not_found_404` / `server_error_*` | 链接失效 / 服务异常 | 换候选 |
+| `not_pdf` / `not_pdf_octet` / `not_pdf_magic` / `json_error_body` | 拿到的不是 PDF | 换候选 |
+| `too_large` / `partial_suffix` / `truncated_no_eof` / `size_mismatch` / `missing` | 文件不完整 | 重下一次；仍坏 → 换源 |
 | `network_error:*` | 连接层（URLError / SSLCertVerificationError 等） | 换候选；`SSLCertVerificationError` 多为代理做 TLS 中间人 → 提示用户换 HTTP 代理或关证书替换，**不要自己关校验**；全失败 → L3 |
 | `no_candidate` | 没有任何 OA 位置 | 直接 L3 |
+| `no_candidate_passed` | 有候选、全未通过 | **回头读 `reasons[]`**，按本表分流 |
 
 ### 3.3 已知盲区（别当成失败判据）
 

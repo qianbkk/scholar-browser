@@ -4,6 +4,51 @@
 > **版本语义（2026-11-18 修订）**：**默认只递增末位**（patch）——绝大多数改动、包括措辞、结构精简、触发词调整都走这里，不需要为"改了文档结构"单独开 minor。**minor 只限两种情况**：用户明确要求升级，或发生了通道级大改（新增/删除一条路由通道、下载行为模式变化）。major = 整体重写。
 > 教训：3.5.0 → 3.6.0 只是精简了文档结构就升了 minor，属判断过宽；本条起回落为 3.5.1。
 
+## 3.5.2（2026-11-18）按实测修路由与出口：顶层 reason 不可分流、静默空转、退出码不传 shell
+
+**起因**：一次外部客观测试（A 组不知情 / B 组按文档 / 无技能对照组，共 30 条冻结用例）。硬门禁 5/5 通过，但路由与交付层暴露出四个可复现的确定性缺陷——它们的共同点是「**失败或空结果对调用方不可见**」。
+
+### 1. 顶层 `reason` 无法分流（路由层，最严重）
+
+- 现象：`fetch` 只要候选 ≥1 且全失败，顶层 `reason` 恒为 `no_candidate_passed`，真实原因（`captcha` / `network_error:*` / `html_landing`）只在 `attempts[].reason`。文档却教执行者「L2 失败看 `reason`」→ 分流表实际读不到值。
+- 实测：3 个 DOI 中 2 个顶层为 `no_candidate_passed`，实际原因分别是 `captcha` 与 `SSLEOFError`。
+- 改动：`oa_fetch.py` 新增 `_top_reason()`——**单候选失败时顶层直接给出该候选原因**，多候选才用 `no_candidate_passed`；`SKILL.md` §2.1 与 `discovery.md` §3.2 明确「分流看 `reasons[]` / `attempts[].reason`」。
+
+### 2. reason 码表覆盖不全（文档与脚本漂移）
+
+- 脚本可产出 19 个码，`discovery.md` 表里只有 10 个；`json_error_body` / `not_pdf*` / `too_large` / `partial_suffix` / `missing` / `no_candidate_passed` 全部缺表。
+- 改动：两处 reason 表补全到 19 个；新增回归用例 `B01` 用 AST 抽出脚本的 reason 集合，**任何一个码没进 SKILL.md 就 FAIL**。
+
+### 3. 交付链静默空转 + 退出码不传 shell
+
+- `scan-new`（文档原样命令）对 L2 直取文件默认判 `manual_drop`、`selected=0`；随后 `adopt` 返回 `adopted=0` 而**退出码 0**。原因是这类文件没有浏览器下载记录，需 `--allow-unconfirmed`——而 SKILL.md 从没提过这个参数（只在 `toolchain.md`）。
+- 更根本：`litadopt.py` / `fetch_cn_journal.py` 的 `main()` 没把 `exit_code` 传给 shell，`verify` 报 4 时进程仍退出 0，任何脚本编排都看不见失败。
+- 改动：① 三个脚本 `sys.exit(main() or 0)`，`litadopt` 用 `LAST_CODE` 回传 emit 的退出码；② `adopt` 在「有目标却一条没落位」时退出 3；③ `SKILL.md` §6 补 `--allow-unconfirmed` 与 `adopted=0` 判失败；
+- ④ `verify` 不再把**已 rollback 批次**的 dst 算成 missing（原先正常回滚必红）。
+
+### 4. L1.5 静默丢弃 + L3 无确定性出口
+
+- `fetch_cn_journal.py` 对「前缀不在内置刊名表」「DOI 不以 10. 开头」「类别 A/B」三种情况**静默跳过**，输出空数组、退出 0，与「本来就没有目标」无法区分。
+- 改动：跳过行写入 `status`（`skipped_no_template` / `skipped_bad_doi` / `skipped_category`）+ `reason`，退出码 3。
+- 新增 `SKILL.md` §10「确定性出口」：L3 不可用时交付清单写 `degraded_to_l1_6: true` + `degraded_reason`（`no_browser` / `no_auth` / `unsupported`），部分失败写 `ok:false` + `fail_reason`（四值枚举），全失败写 `all_fulltext_failed`。
+
+### 5. 文档层修正
+
+- 消除两处内部冲突：`limits.md` 的「遇订阅页立即停」与 `discovery.md` 的「`paywall_landing` → L3」按**用户有没有权限**拆开；403/429 的重试口径统一为「403 不重试、429 退避 1 次」。
+- 33% OA 命中率改口径：n=3 小样本、仅作量级参考，与第三方 123-DOI 数据的对应关系标为**待验证假设**。
+- `SKILL.md` 15,736 → **15,351 字节**（description 716 → 440 字符）；批量与专项命令移入 `references/commands.md`。
+- 新增 `tests/`：`cases.yaml`（27 条声明式用例）+ `run_cases.py` + `run_flow.py`（交付链沙箱测试，11 条）。改任何描述或逻辑后跑一遍，非 0 即 block。
+- `toolchain.md` §4 补「点了下载但目录没文件」的判定节奏：**≤30 秒无中间态才重看页面，90 秒才记需人工**（实测两次落盘相隔约 60 秒）。
+
+
+
+### 6. 回归期新发现：`meta` 的 `ok:true` 会被当"拿到全文"
+
+- 同一篇订阅刊：`fetch` 是 `ok:false` + exit 3，`meta` 却是 `ok:true` + exit 0，而输出里一个字都没说"全文未获取"（源码 `rec["ok"] = bool(title or links)`）。两个 `ok` 语义不同、字段名相同，调用方极易误判。
+- 改动：`meta` 输出新增 `fulltext: false` 与 `deliverable: "metadata_only"`，Markdown 末尾加一行「全文：**未获取**」；SKILL.md §7 注明「`meta` 的 `ok:true` 只代表题录可取」。
+- 另：`resolve` 的 `ok:true` 会掩盖 `notes` 里的 `openalex:network_error:URLError`（本次未改，记为已知缺口）。
+- 用例增至 **27 条**（新增 `G01` 源码契约、`G02` 文档契约）。
+
 ## 3.5.1（2026-11-18）写清**能力依赖机构登录态** + SKILL.md 结构精简 + 触发词收紧
 
 > 版本号说明：本次最初记为 3.6.0，按修订后的语义（默认只动末位、结构精简不算 minor）回落为 **3.5.1**。

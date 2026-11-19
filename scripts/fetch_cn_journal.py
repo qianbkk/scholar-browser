@@ -98,20 +98,30 @@ def pdf_candidates(html, page):
 
 def load(csv_path, force):
     rows = list(csv.DictReader(open(csv_path, encoding="utf-8-sig")))
-    seen, out = set(), []
+    seen, out, skipped = set(), [], []
     for r in rows:
         doi = (r.get("DOI/标识") or "").strip()
-        if not doi.startswith("10.") or doi in seen:
+        base = {"doi": doi, "title": r.get("题名", ""), "src": r.get("来源", ""),
+                "seq": r.get("序号", "")}
+        if not doi.startswith("10."):
+            skipped.append(dict(base, status="skipped_bad_doi",
+                                reason="DOI/标识 不是 10. 开头，无法定位官网"))
+            continue
+        if doi in seen:
             continue
         pref = ".".join(doi.split("/")[0].split(".")[:2])
         if pref not in TPL:
+            skipped.append(dict(base, status="skipped_no_template",
+                                reason="刊名前缀 %s 不在内置映射表，需在 ~/.scholar-browser/cn_journal_map.json 补" % pref))
             continue
         cat = r.get("类别", "")
         if not force and (cat.startswith("A") or cat.startswith("B")):
+            skipped.append(dict(base, status="skipped_category",
+                                reason="类别 %s 已人工判定，需强制时加 --force" % cat))
             continue
         seen.add(doi)
-        out.append({"doi": doi, "title": r.get("题名", ""), "src": r.get("来源", ""), "seq": r.get("序号", "")})
-    return out
+        out.append(base)
+    return out, skipped
 
 
 def main():
@@ -124,9 +134,9 @@ def main():
     a = ap.parse_args()
 
     os.makedirs(a.dest, exist_ok=True)
-    ts = load(a.csv, a.force)
-    print("targets:", len(ts))
-    res = []
+    ts, skipped = load(a.csv, a.force)
+    print("targets:", len(ts), "skipped:", len(skipped))
+    res = list(skipped)
     for i, t in enumerate(ts, 1):
         doi, title = t["doi"], t["title"]
         pref = ".".join(doi.split("/")[0].split(".")[:2])
@@ -171,9 +181,12 @@ def main():
 
     json.dump(res, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     from collections import Counter
-    print("\nok %d/%d" % (sum(1 for r in res if r["status"] == "ok"), len(res)))
+    okn = sum(1 for r in res if r["status"] == "ok")
+    print("\nok %d/%d" % (okn, len(res)))
     print(Counter(r["status"] for r in res))
+    # 退出码：全部成功 0；有失败或跳过 3（不许静默成功）
+    return 0 if okn == len(res) else 3
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)
