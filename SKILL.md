@@ -10,14 +10,16 @@ display_name_en: Scholar Literature Fetcher
 description: 学术文献检索与全文获取：从主题或 DOI 出发，先宽泛发现拿标识符，再开放获取直取 PDF（魔数校验），中文先试期刊官网，需登录时才用用户自己的浏览器逐页操作，拿不到全文则回填题录与摘要；文件自动校验、去重、规范命名后归集到工作区。用于查文献、检索文献、搜论文、找文献、下载论文、文献综述、文献归集、导出题录、OA 全文、这篇能不能下，以及点名知网 CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar 时要检索或取全文。不适用于通用网页抓取、表单填写、站点测试、软件/视频/素材下载、商品社媒采集、专利与标准检索。
 description_zh: 五通道分层路由的文献获取：发现 → 中文期刊官网 → 开放获取直取 → 浏览器协作 → 摘要回填，自动归集。无登录态时仅 OA 通道可用，订阅刊给题录+摘要+链接。
 description_en: Five-channel literature workflow - discovery, Chinese journal sites, open-access fetch with magic-byte validation, browser-assisted retrieval, abstract backfill; auto-adopts into the workspace. Not for general scraping, form filling, or site QA.
-version: 3.6.2
+version: 3.6.3
 ---
 
 # 学术文献获取工作流（五通道分层路由）
 
+> **本文件每次调用都全量注入，所以只放"每次必用的判断骨架"**：铁律、路由、红线、命令入口、交付契约。细节一律按需读 `references/`，入口见 §8 / `ROUTER.md`。
+
 铁律：**能直取就不开浏览器；开了就逐页真人式操作；文件先过魔数闸门；只认本次新增、不碰历史；不编造平台文案；失败必带 reason，不静默。**
 
-`<skill_dir>` = 本文件所在目录（换机器按实际位置替换）。`<workspace>` = 工作区根目录。Python 用 PATH 上的 `python`（3.9+，仅标准库）。
+`<skill_dir>` = 本文件所在目录（换机器按实际位置替换）。`<workspace>` = 工作区根目录。Python 用 PATH 上的 `python`（3.9+，仅标准库）。**脚本用 `python "<skill_dir>/scripts/xxx.py"` 调用**（实测 `python -m scripts.xxx` 会因 `import _config` 平级导入失败，不要用）。**下载目录不硬编码**：本机实测注册表 `User Shell Folders` 指向非默认盘符，查错目录会把已下到的文件误判为失败——用 `litadopt.py init-baseline` 自动解析。
 **运行环境**：脚本层（L1–L2 / L1.6 / 归集）任何 agent 可用；**L3 段按 WorkBuddy 的 browser-use 写成**，换方案按 `browser-adapters.md` 映射；**L3 不可用按 §10 降级，不许静默失败**。
 
 ## 1. 定位与适用边界
@@ -31,6 +33,8 @@ version: 3.6.2
 | **无机构、无订阅** | L1 / L1.5 / L2 / L1.6 | 英文 OA 可直取一部分（n=3 小样本实测 1/3，仅作量级参考）；中文限 OA 刊官网 PDF；订阅刊只给题录 + 摘要 + 链接 |
 
 两句说清：本技能**不提供、不索取、不代替**任何机构权限，登录只在用户自己的浏览器里完成，不读取、不保存、不回显凭据（§4）。无登录态**不是失败，是降级**：文件拿不到，题录 / 摘要 / 链接必须给（§7）。
+
+**主场景是「机构登录态下取全文」**：实测 A/B 双臂下载动作都能成功，真正的差异在**下完之后能否认出文件、判对格式、归位清源、交到用户手上**——只点下载不算完成。机构权限还有第四种形态：**IP 授权（校网/VPN），无需登录但走代理即失效**； ScienceDirect 跳转 URL 含 `/abs/` = 没拿到全文，先怀疑出口 IP 而非权限（见 `runtime.md`）。
 
 ## 2. 五通道（按执行顺序，L1.6 兜底）
 
@@ -53,21 +57,16 @@ version: 3.6.2
 
 **省时间**：先标识符再翻页；先题录后全文；**权限前置**（见到 `Get Access`、锁图标或跳登录即判无权限）；L2 失败把 reason 带进 L3，别重复踩同一个坑。
 
-### 2.1 reason 码 → 下一步（**分流看 `attempts[]`，不是只看顶层 `reason`**）
+### 2.1 失败分流（判定阈值见 `discovery.md` §3.2）
 
-顶层 `reason`：**单候选失败时就是该候选的真实原因**；**多候选全失败时才是 `no_candidate_passed`**，此时必须读 `reasons[]` / `attempts[].reason` 分流。
+顶层 `reason`：**单候选失败就是真因**；**多候选全失败才是 `no_candidate_passed`**，此时必须读 `reasons[]` / `attempts[].reason` 分流。四类动作：
 
-| 分组 | reason | 下一步 | 可重试 |
-|---|---|---|---|
-| 通过 | `ok` | 完成，记 `via` | — |
-| 页面不是 PDF | `html_landing` `not_found_404` `server_error_*` `not_pdf` `not_pdf_octet` `not_pdf_magic` `json_error_body` | 换候选；耗尽 → L3 | 不重试 |
-| 要交互 | `cloudflare_challenge` `login_wall` `need_auth` `paywall_landing` | L3（真实浏览器可解；`paywall_landing` 无机构权限转正规渠道） | 不重试 |
-| 硬停 | `captcha` `forbidden_403` | **停机**标「需人工」 | **不重试** |
-| 限流 / 残缺 | `rate_limited_429`；`too_large` `partial_suffix` `truncated_no_eof` `size_mismatch` `missing` | 429 退避一次；残缺重下一次；仍失败换源 | **各 1 次** |
-| 连接层 | `network_error:*` | 换候选；全失败 → L3。证书错多为代理中间人，提示用户关代理，**不要自己关校验** | 不重试 |
-| 无候选 | `no_candidate` / `no_candidate_passed` | 前者直接 L3；后者**回头读 `reasons[]`** | — |
+- **换候选**：`html_landing` `not_found_404` `server_error_*` `not_pdf` `not_pdf_octet` `not_pdf_magic` `json_error_body` `network_error:*`（耗尽 → L3）
+- **转 L3**：`cloudflare_challenge` `login_wall` `need_auth` `paywall_landing`（校验/登录只真实浏览器能解）
+- **硬停不重试**：`captcha` `forbidden_403`；`no_candidate` 直接 L3
+- **限一次**：`rate_limited_429` 退避一次；`too_large` `partial_suffix` `truncated_no_eof` `size_mismatch` `missing` 重下一次；`no_candidate_passed` 回头读 `reasons[]`
 
-**这张表只回答"接下来做什么"**；各码的判定阈值与含义见 `discovery.md` §3.2，不在此重复。
+`ok` 完成记 `via`。证书错多为代理中间人，**提示用户处理，不要自己关校验**。
 
 ## 3. 平台速查（细节在 `platforms-*.md`）
 
@@ -123,9 +122,7 @@ python "<skill_dir>/scripts/litadopt.py" report --workspace "<workspace>" --form
 
 批量与专项命令（`batch` / `fetch_cn_journal` / `checklist` / `sd_zip` / `ris_meta`）见 `commands.md`。
 
-- **`scan-new` 对 L2 直取 / 手工放入的文件默认判 `manual_drop`（`selected=0`）**——这类文件没有浏览器下载记录。核对确由本轮产生后加 `--allow-unconfirmed` 重扫，不要手改 plan。
-- **`adopt` 出现 `adopted=0` 且 `not_moved>0` 视为失败（退出码 3）**，不许当成功继续；`verify` 非 0、或 `report` 的会话不是本轮 `session_id`，同样按失败处理。
-- **默认把本次下载的文献移入工作区**：先复制到目标、校验 MD5 一致后才删源；**plan 之外的文件一律不碰**。`--keep-sources` 才保留源文件。删源失败记 `source_kept:<原因>` 并退出 3（副本已在，源未删）。`rollback` 会把文件放回原路径。**格式优先级 PDF > CAJ > KDH**，按魔数判真实格式（后缀不可信），不为换格式反复重下（每次下载都计配额，间隔 ≥3–5 秒）。
+- **归集三铁律**：① `scan-new` 对 L2 / 手工文件判 `manual_drop`（`selected=0`），核对确属本轮后加 `--allow-unconfirmed` 重扫，不手改 plan；② `adopted=0` 且 `not_moved>0` 视为失败（退出码 3），`verify` 非 0 / 会话不符同罪；③ **默认把本次下载的文献移入工作区**——复制到目标、MD5 一致后才删源，**plan 之外的文件一律不碰**；`--keep-sources` 才留源，删源失败记 `source_kept:<原因>` 退 3，`rollback` 放回。格式优先级 PDF > CAJ > KDH，按魔数判（后缀不可信），不为换格式反复重下。细则见 `toolchain.md` §4–§5。
 
 ## 7. 交付标准：每篇都要给出「能自己继续」的东西
 
@@ -138,10 +135,9 @@ python "<skill_dir>/scripts/litadopt.py" report --workspace "<workspace>" --form
 
 `fail_reason` 只取四值，不要自由发挥：`need_subscription` / `need_verify` / `need_institution` / `not_found`。
 
-- **摘要优先级**：出版商/期刊落地页（最准）→ RIS 导出 → 中文官网 / 知网 DOI / cdmd / 镜像站 → OpenAlex → S2 → Crossref。全无则写「该库未提供摘要」+ 链接，**不编造**（`abstract-recovery.md`）。
-- **「主要内容」不是摘要翻译**：压成"做了什么 + 什么方法 + 关键数字 + 对本课题何用"2–4 句；每条标来源；DOI 与卷期取自已核验清单。
-- **判断标准：用户拿着这条记录能自己点开链接继续。** 只回一句"下不了"不合格。替代路径按序给：OA 副本 → 出版商/PubMed/arXiv 链接 → 同主题替代文献（说清替代了什么）→ 校园网 / CARSI / 文献传递 / 向作者索取。
-- **落盘**：`<workspace>/文献/<主题>/`，命名 `NN_题名_作者_来源.{pdf|caj}`，序号接目录最大值，MD5 去重，同名不同内容不覆盖；状态与日志在 `<workspace>/.litadopt/`。**作者取不到写 `unknown`，不编造**（`resolve` 无作者，`meta` 有）。KDH/CAJ 须注明需官方阅读器。汇报区分「直取(L2)」与「浏览器(L3)」，并说明是否 OA、是否 preprint。
+- **摘要**：优先出版商落地页 → RIS → 中文官网 → 开放图谱；全无写「该库未提供摘要」+ 链接，**不编造**。完整优先级与命中率见 `abstract-recovery.md`。
+- **判断标准：用户拿着这条记录能自己点开链接继续。** 只回「下不了」不合格；替代路径按序给（OA 副本 → 出版商/arXiv 链接 → 替代文献 → 校园网/CARSI/馆际传递）。「主要内容」压成"做了什么+方法+关键数字+对本课题何用"2–4 句并标来源。
+- **落盘**：`<workspace>/文献/<主题>/`，`NN_题名_作者_来源.{pdf|caj}`，序号接目录最大值，MD5 去重；状态在 `<workspace>/.litadopt/`。作者取不到写 `unknown`，不编造。KDH/CAJ 注明需官方阅读器。汇报区分 L2/L3、是否 OA/preprint。
 
 ## 8. 按需加载（渐进式披露）
 
@@ -156,12 +152,12 @@ python "<skill_dir>/scripts/litadopt.py" report --workspace "<workspace>" --form
 
 其余（检索式、平台 SOP、分级标准、派子代理模板）见 `ROUTER.md` 路由表，**不要全量加载**。
 
-## 9. 已知限制
+## 9. 已知限制（细节见 `limits.md` / `sd-batch.md`）
 
-- **L2 单篇时间预算 90 秒**：`fetch` 在慢链路或大文件上可能长时间无输出（与带宽无关，实测同一文件独占 1.2 秒）。外层超时 90 秒包住，超时记 `network_error:timeout` 并降级，**别把卡住当成还在跑**。
-- **订阅型单篇 PDF 不能自动写盘**（进阅读器 → 系统另存为）→ 走 SD 批量 ZIP（`sd-batch.md`），失败最多重试一次。无 CAJViewer / caj2pdf → 真 CAJ 转不了；知网可能给 **KDH**，需官方阅读器。
-- **摘要多是"渲染后才有"**：直接请求 ScienceDirect 被 403，部分站点 WAF 连渲染也过不去，只能交用户点一次。OA 站点也可能因 TLS 指纹被拒——L2 固有上限，不是 bug。
-- `mcp__browser__*` 无下载管理与读本地文件能力，下载靠点击、文件侧交脚本。**浏览器段仅适配 WorkBuddy**。
+- **L2 单篇预算 90 秒**：超时记 `network_error:timeout` 降级，别把卡住当在跑。
+- **订阅型单篇 PDF 不自动写盘**（进阅读器 → 系统另存为）→ SD 批量 ZIP，最多重试一次；知网 KDH / 真 CAJ 需官方阅读器。
+- **403 / TLS 指纹 / 校验页是 L2 固有上限**，不是 bug；`403` 不重试，转 L3 或交用户，别把 403 误判成「没有 OA 版本」。
+- **浏览器 MCP 无下载管理与读本地文件能力**：下载靠点击、文件侧交脚本；机构授权库走代理会失效（先怀疑出口，见 `runtime.md`）。浏览器段仅适配 WorkBuddy。
 
 ## 10. 确定性出口（L3 不可用 / 部分失败时怎么收）
 
