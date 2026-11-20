@@ -165,6 +165,29 @@ def _sniff(head, status, ctype, final_url):
     return "not_pdf"
 
 
+def failure_hint(reasons, proxy_mode=None):
+    """失败时给出可执行的下一步。只生成提示，不改 reason 码、不改契约。
+
+    设计要点：403 与网络错的最常见误判是「这篇没有 OA 版本」——实际往往是
+    出口或通道问题。这里把「可试什么」直接写进输出，避免调用方误判后收手。
+    """
+    rs = [r or "" for r in (reasons or [])]
+    joined = " ".join(rs)
+    if any(r.startswith("network_error") for r in rs):
+        return "network_error: 可显式指定代理重试（--proxy <url>），或换候选源"
+    if "cloudflare_challenge" in rs or "captcha" in rs:
+        return "challenge: 属站点人机校验，停机转 L3 浏览器逐页操作；不要重复撞同一页"
+    if "forbidden_403" in joined:
+        if proxy_mode == "direct(default)":
+            return "forbidden_403: 当前为默认直连；可显式指定代理重试（--proxy <url>），或换 OA 绿版候选；403 不重试同一 URL"
+        return "forbidden_403: 已用代理仍 403，多为站点指纹或机构出口限制；换候选或交 L3，不要反复重试"
+    if "login_wall" in rs or "paywall_landing" in rs or "need_auth" in rs:
+        return "access: 需机构权限，转 L3 用你自己的浏览器；拿不到则回填题录+摘要+链接"
+    if any(r.startswith("not_found") or r in ("html_landing", "not_pdf", "json_error_body") for r in rs):
+        return "landing: 页面不是 PDF，换候选；耗尽后转 L3 或回填题录"
+    return "见 attempts[].reason 分流；同一动作不要重试超过 1 次"
+
+
 def probe(url, email=None, timeout=25, nbytes=8192):
     rec = {
         "url": url,
@@ -1005,9 +1028,28 @@ def batch_fetch(items, out_dir, email, interval=2.0):
             "out_dir": out_dir, "items": results}
 
 
-def make_checklist(items, title="待下载清单"):
-    """把取不到的文献生成可点击清单：用户手动另存后，再交给 litadopt.py 归集。"""
+def make_checklist(items, title="待下载清单", email=None):
+    """把取不到的文献生成可点击清单：用户手动另存后，再交给 litadopt.py 归集。
+
+    纯 DOI 清单没有题名/年份，这里对空项调 meta_record 回填，避免交付一张
+    「题名空、年份问号」的清单——那种清单用户拿着没法继续。回填失败仍保留
+    DOI 链接，不编造题录。
+    """
     label = {0: "P0 必读", 1: "P1 高度相关", 2: "P2 方法学", 3: "P3 结构响应", 4: "P4 背景"}
+    for it in items:
+        if it.get("title") and it.get("year"):
+            continue
+        try:
+            rec = meta_record(it["doi"], email)
+        except Exception:
+            continue
+        r = (rec or {}).get("record") or {}
+        if not it.get("title") and r.get("title"):
+            it["title"] = r["title"]
+        if not it.get("venue") and r.get("venue"):
+            it["venue"] = r["venue"]
+        if not it.get("year") and r.get("year"):
+            it["year"] = r["year"]
     L = ["# %s" % (title if ("（" in title or "(" in title) else "%s（%d 篇）" % (title, len(items))), ""]
     L.append("> 这些文献在当前工具链下**无法自动写盘**（订阅型出版商 + 系统另存为对话框）。")
     L.append("> 用法：点 DOI 链接 → 页面点 `View PDF` → 阅读器里点保存 → 存到目标文献目录。")
@@ -1261,11 +1303,13 @@ def main():
         items = read_doi_list(a.list)
         if not items:
             return jout({"ok": False, "error": "empty_list"}, 2)
-        md = make_checklist(items, a.title)
+        md = make_checklist(items, a.title, email)
+        filled = sum(1 for x in items if x.get("title"))
         os.makedirs(os.path.dirname(os.path.abspath(a.out)) or ".", exist_ok=True)
         with open(a.out, "w", encoding="utf-8") as f:
             f.write(md)
-        return jout({"ok": True, "out": a.out, "count": len(items), "lines": md.count("\n")}, 0)
+        return jout({"ok": True, "out": a.out, "count": len(items),
+                     "titles_filled": filled, "lines": md.count("\n")}, 0)
 
     if a.cmd == "probe":
         rec = probe(a.url, email)
@@ -1314,10 +1358,12 @@ def main():
             )
 
     reasons = [x.get("reason") for x in attempts]
+    pmode = "explicit(%s)" % a.proxy if getattr(a, "proxy", None) else (
+        "auto(direct->env)" if getattr(a, "auto_proxy", False) else "direct(default)")
     return jout(
         {"ok": False, "doi": doi, "reason": _top_reason(reasons), "attempts": attempts,
          "sources": src if doi else {}, "elapsed_s": round(time.time() - t0, 2),
-         "reasons": reasons},
+         "reasons": reasons, "hint": failure_hint(reasons, pmode)},
         3,
     )
 

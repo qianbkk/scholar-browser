@@ -10,7 +10,7 @@ display_name_en: Scholar Literature Fetcher
 description: 学术文献检索与全文获取：从主题或 DOI 出发，先宽泛发现拿标识符，再开放获取直取 PDF（魔数校验），中文先试期刊官网，需登录时才用用户自己的浏览器逐页操作，拿不到全文则回填题录与摘要；文件自动校验、去重、规范命名后归集到工作区。用于查文献、检索文献、搜论文、找文献、下载论文、文献综述、文献归集、导出题录、OA 全文、这篇能不能下，以及点名知网 CNKI、万方、维普、Web of Science、PubMed、arXiv、ScienceDirect、Google Scholar 时要检索或取全文。不适用于通用网页抓取、表单填写、站点测试、软件/视频/素材下载、商品社媒采集、专利与标准检索。
 description_zh: 五通道分层路由的文献获取：发现 → 中文期刊官网 → 开放获取直取 → 浏览器协作 → 摘要回填，自动归集。无登录态时仅 OA 通道可用，订阅刊给题录+摘要+链接。
 description_en: Five-channel literature workflow - discovery, Chinese journal sites, open-access fetch with magic-byte validation, browser-assisted retrieval, abstract backfill; auto-adopts into the workspace. Not for general scraping, form filling, or site QA.
-version: 3.6.1
+version: 3.6.2
 ---
 
 # 学术文献获取工作流（五通道分层路由）
